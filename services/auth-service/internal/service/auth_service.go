@@ -83,6 +83,7 @@ func (s *AuthService) generateTokens(userID string) (string, string, error) {
 		Token:     refreshTokenStr,
 		ExpiresAt: time.Now().Add(s.jwtManager.RefreshTokenDuration),
 		Revoked:   false,
+		CreatedAt: time.Now(),
 	}
 
 	if err := s.tokenRepo.SaveRefreshToken(refreshToken); err != nil {
