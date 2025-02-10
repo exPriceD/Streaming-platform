@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/service"
 	pb "github.com/exPriceD/Streaming-platform/services/auth-service/proto"
 )
@@ -70,4 +71,39 @@ func (h *AuthHandler) Login(ctx context.Context, req *pb.LoginRequest) (*pb.Logi
 		RefreshToken: refreshToken,
 		ExpiresIn:    3600,
 	}, nil
+}
+
+func (h *AuthHandler) ValidateToken(ctx context.Context, req *pb.ValidateTokenRequest) (*pb.ValidateTokenResponse, error) {
+	userID, err := h.authService.ValidateAccessToken(req.AccessToken)
+	if err != nil {
+		return &pb.ValidateTokenResponse{
+			Valid: false,
+			Error: mapErrorToProto(err),
+		}, nil
+	}
+
+	return &pb.ValidateTokenResponse{
+		Valid:  true,
+		UserId: userID,
+	}, nil
+}
+
+func mapErrorToProto(err error) *pb.Error {
+	switch {
+	case errors.Is(err, service.ErrTokenExpired):
+		return &pb.Error{
+			Code:    pb.ErrorCode_TOKEN_EXPIRED,
+			Message: "The token has expired",
+		}
+	case errors.Is(err, service.ErrTokenInvalid):
+		return &pb.Error{
+			Code:    pb.ErrorCode_TOKEN_INVALID,
+			Message: "Invalid token",
+		}
+	default:
+		return &pb.Error{
+			Code:    pb.ErrorCode_INTERNAL_ERROR,
+			Message: "Internal server error",
+		}
+	}
 }
