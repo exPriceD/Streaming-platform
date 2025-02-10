@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
+	"time"
 )
 
 type User struct {
@@ -12,6 +13,8 @@ type User struct {
 	Email                   string
 	PasswordHash            string
 	ConsentToDataProcessing bool
+	CreatedAt               time.Time
+	UpdatedAt               time.Time
 }
 
 func (u *User) CheckPassword(password string) bool {
@@ -32,12 +35,16 @@ func NewUser(username, email, password string, consent bool) (*User, error) {
 		return nil, err
 	}
 
+	now := time.Now()
+
 	return &User{
 		ID:                      uuid.New(),
 		Username:                username,
 		Email:                   email,
 		PasswordHash:            hashedPassword,
 		ConsentToDataProcessing: consent,
+		CreatedAt:               now,
+		UpdatedAt:               now,
 	}, nil
 }
 
