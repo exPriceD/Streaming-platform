@@ -8,6 +8,11 @@ import (
 	"time"
 )
 
+var (
+	ErrTokenExpired = errors.New("the token expired")
+	ErrTokenInvalid = errors.New("invalid token")
+)
+
 type AuthService struct {
 	userRepo   repository.UserRepository
 	tokenRepo  repository.TokenRepository
@@ -93,8 +98,16 @@ func (s *AuthService) generateTokens(userID string) (string, string, error) {
 	return accessToken, refreshTokenStr, nil
 }
 
-func (s *AuthService) ValidateAccessToken(tokenStr string) (*token.UserClaims, error) {
-	return s.jwtManager.ValidateToken(tokenStr)
+func (s *AuthService) ValidateAccessToken(accessToken string) (string, error) {
+	claims, err := s.jwtManager.ValidateToken(accessToken)
+	if err != nil {
+		if err.Error() == "token is expired" {
+			return "", ErrTokenExpired
+		}
+		return "", ErrTokenInvalid
+	}
+
+	return claims.UserID, nil
 }
 
 func (s *AuthService) RefreshTokens(refreshTokenStr string) (string, error) {
