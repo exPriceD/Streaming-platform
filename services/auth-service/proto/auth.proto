@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+package auth.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/exPriceD/Streaming-platform/services/auth-service/proto/authpb";
+
+// Сервис аутентификации, предоставляющий регистрацию, логин и валидацию токенов.
+service AuthService {
+  rpc Register(RegisterRequest) returns (RegisterResponse);       // Создает нового пользователя
+  rpc Login(LoginRequest) returns (LoginResponse);                // Аутентифицирует пользователя
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse); // Проверяет корректность access_token
+}
+
+// Перечисление для обозначения пола пользователя.
+enum Gender {
+  GENDER_UNSPECIFIED = 0;  // Пол не указан
+  GENDER_MALE = 1;         // Мужской
+  GENDER_FEMALE = 2;       // Женский
+}
+
+// Перечисление возможных кодов ошибок.
+enum ErrorCode {
+  ERROR_CODE_UNSPECIFIED = 0;   // Ошибка не указана
+  INVALID_ARGUMENT = 1;         // Неверные данные в запросе
+  ALREADY_EXISTS = 2;           // Пользователь уже существует
+  UNAUTHORIZED = 3;             // Неверные данные для авторизации
+  TOKEN_EXPIRED = 4;            // Токен истёк
+  TOKEN_INVALID = 5;            // Токен недействителен
+  INTERNAL_ERROR = 6;           // Внутренняя ошибка сервера
+}
+
+// Структура для возврата ошибок.
+message Error {
+  ErrorCode code = 1;           // Код ошибки
+  string message = 2;           // Описание ошибки
+}
+
+// Данные для регистрации пользователя.
+message RegisterRequest {
+  string username = 1;                     // Уникальное имя пользователя
+  string email = 2;                        // Email адрес пользователя
+  string password = 3;                     // Пароль пользователя
+  google.protobuf.Timestamp birthday = 4;  // Дата рождения (формат RFC 3339)
+  Gender gender = 5;                       // Пол пользователя
+  bool consent_to_data_processing = 6;     // Согласие на обработку персональных данных (обязательно)
+}
+
+// Ответ на запрос регистрации.
+message RegisterResponse {
+  string user_id = 1;       // Идентификатор пользователя (например, UUID)
+  string access_token = 2;  // JWT-токен доступа
+  string refresh_token = 3; // Refresh-токен для обновления access_token
+  int64 expires_in = 4;     // Время жизни access_token в секундах
+  Error error = 5;          // Ошибка, если регистрация не удалась
+}
+
+// Данные для авторизации пользователя.
+message LoginRequest {
+  oneof login_identifier {// Использование oneof для указания либо email, либо username
+    string email = 1;     // Email для входа
+    string username = 2;  // Имя пользователя для входа
+  }
+  string password = 3;      // Пароль для авторизации
+}
+
+// Ответ на запрос авторизации.
+message LoginResponse {
+  string user_id = 1;       // Идентификатор пользователя
+  string access_token = 2;  // JWT-токен доступа
+  string refresh_token = 3; // Refresh-токен
+  int64 expires_in = 4;     // Время жизни access_token в секундах
+  Error error = 5;          // Ошибка, если авторизация не удалась
+}
+
+// Запрос на валидацию access_token.
+message ValidateTokenRequest {
+  string access_token = 1;  // Токен для проверки
+}
+
+// Ответ на запрос валидации токена.
+message ValidateTokenResponse {
+  bool valid = 1;           // Результат проверки: true, если токен валиден
+  string user_id = 2;       // Идентификатор пользователя, извлечённый из токена (если валиден)
+  Error error = 3;          // Ошибка, если токен недействителен
+}
