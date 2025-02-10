@@ -40,14 +40,14 @@ func (r *userRepository) CreateUser(user *entities.User) error {
 
 func (r *userRepository) GetUserByEmail(email string) (*entities.User, error) {
 	query := `
-        SELECT id, email, password_hash, consent_to_data_processing
+        SELECT id, email, password_hash, consent_to_data_processing, created_at, updated_at
         FROM users
         WHERE email = $1
     `
 
 	var userModel models.UserModel
 	err := r.db.QueryRow(query, email).
-		Scan(&userModel.ID, &userModel.Email, &userModel.PasswordHash, &userModel.ConsentToDataProcessing)
+		Scan(&userModel.ID, &userModel.Email, &userModel.PasswordHash, &userModel.ConsentToDataProcessing, &userModel.CreatedAt, &userModel.UpdatedAt)
 
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, errors.New("the user was not found")
@@ -60,14 +60,14 @@ func (r *userRepository) GetUserByEmail(email string) (*entities.User, error) {
 
 func (r *userRepository) GetUserByUsername(username string) (*entities.User, error) {
 	query := `
-        SELECT id, username, email, password_hash, consent_to_data_processing
+        SELECT id, username, email, password_hash, consent_to_data_processing, created_at, updated_at
         FROM users
         WHERE username = $1
     `
 
 	var userModel models.UserModel
 	err := r.db.QueryRow(query, username).
-		Scan(&userModel.ID, &userModel.Username, &userModel.Email, &userModel.PasswordHash, &userModel.ConsentToDataProcessing)
+		Scan(&userModel.ID, &userModel.Username, &userModel.Email, &userModel.PasswordHash, &userModel.ConsentToDataProcessing, &userModel.CreatedAt, &userModel.UpdatedAt)
 
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, errors.New("пользователь не найден")
@@ -85,5 +85,7 @@ func mapModelToEntity(userModel *models.UserModel) *entities.User {
 		Email:                   userModel.Email,
 		PasswordHash:            userModel.PasswordHash,
 		ConsentToDataProcessing: userModel.ConsentToDataProcessing,
+		CreatedAt:               userModel.CreatedAt,
+		UpdatedAt:               userModel.UpdatedAt,
 	}
 }
