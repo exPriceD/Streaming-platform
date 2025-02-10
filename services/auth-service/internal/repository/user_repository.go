@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/entities"
+	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/models"
 	"github.com/lib/pq"
 	"time"
 )
@@ -44,15 +45,17 @@ func (r *userRepository) GetUserByEmail(email string) (*entities.User, error) {
         WHERE email = $1
     `
 
-	var user entities.User
+	var userModel models.UserModel
 	err := r.db.QueryRow(query, email).
-		Scan(&user.ID, &user.Email, &user.PasswordHash, &user.ConsentToDataProcessing)
+		Scan(&userModel.ID, &userModel.Email, &userModel.PasswordHash, &userModel.ConsentToDataProcessing)
 
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, errors.New("the user was not found")
 	}
 
-	return &user, err
+	user := mapModelToEntity(&userModel)
+
+	return user, err
 }
 
 func (r *userRepository) GetUserByUsername(username string) (*entities.User, error) {
@@ -62,13 +65,25 @@ func (r *userRepository) GetUserByUsername(username string) (*entities.User, err
         WHERE username = $1
     `
 
-	var user entities.User
+	var userModel models.UserModel
 	err := r.db.QueryRow(query, username).
-		Scan(&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.ConsentToDataProcessing)
+		Scan(&userModel.ID, &userModel.Username, &userModel.Email, &userModel.PasswordHash, &userModel.ConsentToDataProcessing)
 
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, errors.New("пользователь не найден")
 	}
 
-	return &user, err
+	user := mapModelToEntity(&userModel)
+
+	return user, err
+}
+
+func mapModelToEntity(userModel *models.UserModel) *entities.User {
+	return &entities.User{
+		ID:                      userModel.ID,
+		Username:                userModel.Username,
+		Email:                   userModel.Email,
+		PasswordHash:            userModel.PasswordHash,
+		ConsentToDataProcessing: userModel.ConsentToDataProcessing,
+	}
 }
