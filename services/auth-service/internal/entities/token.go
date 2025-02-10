@@ -8,4 +8,5 @@ type RefreshToken struct {
 	Token     string
 	ExpiresAt time.Time
 	Revoked   bool
+	CreatedAt time.Time
 }
