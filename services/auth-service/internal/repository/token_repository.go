@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/entities"
+	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/models"
 	"time"
 )
 
@@ -17,21 +18,21 @@ func NewTokenRepository(db *sql.DB) TokenRepository {
 
 func (r *tokenRepository) SaveRefreshToken(token *entities.RefreshToken) error {
 	query := `
-        INSERT INTO refresh_tokens (user_id, token, expires_at, revoked)
+        INSERT INTO refresh_tokens (user_id, token, expires_at, revoked, created_at)
         VALUES ($1, $2, $3, $4)
     `
-	_, err := r.db.Exec(query, token.UserID, token.Token, token.ExpiresAt, false)
+	_, err := r.db.Exec(query, token.UserID, token.Token, token.ExpiresAt, false, token.CreatedAt)
 	return err
 }
 
 func (r *tokenRepository) GetRefreshToken(tokenStr string) (*entities.RefreshToken, error) {
 	query := `
-        SELECT id, user_id, token, expires_at, revoked
+        SELECT id, user_id, token, expires_at, revoked, created_at
         FROM refresh_tokens
         WHERE token = $1
     `
 	var token entities.RefreshToken
-	err := r.db.QueryRow(query, tokenStr).Scan(&token.ID, &token.UserID, &token.Token, &token.ExpiresAt, &token.Revoked)
+	err := r.db.QueryRow(query, tokenStr).Scan(&token.ID, &token.UserID, &token.Token, &token.ExpiresAt, &token.Revoked, &token.CreatedAt)
 
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, errors.New("the token was not found")
@@ -50,4 +51,15 @@ func (r *tokenRepository) RevokeRefreshToken(tokenStr string) error {
     `
 	_, err := r.db.Exec(query, tokenStr)
 	return err
+}
+
+func mapTokenModelToEntity(tokenModel *models.RefreshTokenModel) *entities.RefreshToken {
+	return &entities.RefreshToken{
+		ID:        tokenModel.ID,
+		UserID:    tokenModel.UserID,
+		Token:     tokenModel.Token,
+		ExpiresAt: tokenModel.ExpiresAt,
+		Revoked:   tokenModel.Revoked,
+		CreatedAt: tokenModel.CreatedAt,
+	}
 }
