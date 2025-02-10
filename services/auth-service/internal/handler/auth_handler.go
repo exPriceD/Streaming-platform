@@ -16,7 +16,7 @@ func NewAuthHandler(authService *service.AuthService) *AuthHandler {
 }
 
 func (h *AuthHandler) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.RegisterResponse, error) {
-	user, err := h.authService.Register(req.Username, req.Email, req.Password, req.Consent)
+	user, accessToken, refreshToken, err := h.authService.Register(req.Username, req.Email, req.Password, req.ConsentToDataProcessing)
 	if err != nil {
 		return &pb.RegisterResponse{
 			Error: &pb.Error{
@@ -28,8 +28,8 @@ func (h *AuthHandler) Register(ctx context.Context, req *pb.RegisterRequest) (*p
 
 	return &pb.RegisterResponse{
 		UserId:       user.ID.String(),
-		AccessToken:  "dummy_access_token",
-		RefreshToken: "dummy_refresh_token",
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
 		ExpiresIn:    3600,
 	}, nil
 }
@@ -54,7 +54,7 @@ func (h *AuthHandler) Login(ctx context.Context, req *pb.LoginRequest) (*pb.Logi
 		}, nil
 	}
 
-	user, err := h.authService.Authenticate(identifier, req.Password, isEmail)
+	user, accessToken, refreshToken, err := h.authService.Authenticate(identifier, req.Password, isEmail)
 	if err != nil {
 		return &pb.LoginResponse{
 			Error: &pb.Error{
@@ -66,8 +66,8 @@ func (h *AuthHandler) Login(ctx context.Context, req *pb.LoginRequest) (*pb.Logi
 
 	return &pb.LoginResponse{
 		UserId:       user.ID.String(),
-		AccessToken:  "dummy_access_token",
-		RefreshToken: "dummy_refresh_token",
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
 		ExpiresIn:    3600,
 	}, nil
 }
