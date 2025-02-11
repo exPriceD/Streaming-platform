@@ -3,35 +3,48 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"github.com/exPriceD/Streaming-platform/config"
 	"log"
-	"os"
 	"time"
 )
 
-func NewPostgresConnection() (*sql.DB, error) {
-	host := os.Getenv("DB_HOST")
-	port := os.Getenv("DB_PORT")
-	user := os.Getenv("DB_USER")
-	password := os.Getenv("DB_PASSWORD")
-	dbname := os.Getenv("DB_NAME")
+var (
+	MaxOpenConnections    = 25
+	MaxIdleConnections    = 25
+	ConnectionMaxLifetime = 5 * time.Minute
+	maxRetries            = 5
+	retryDelay            = 5 * time.Second
+	connTimeout           = 5 * time.Second
+)
 
-	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		host, port, user, password, dbname,
+func NewPostgresConnection(dbConfig config.DBConfig) (*sql.DB, error) {
+	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s connect_timeout=%d",
+		dbConfig.Host, dbConfig.Port, dbConfig.User, dbConfig.Password, dbConfig.Name, dbConfig.SSLMode, int(connTimeout.Seconds()),
 	)
 
-	db, err := sql.Open("postgres", dsn)
-	if err != nil {
-		return nil, err
+	var db *sql.DB
+	var err error
+
+	for i := 1; i <= maxRetries; i++ {
+		db, err = sql.Open("postgres", dsn)
+		if err != nil {
+			log.Printf("Attempt %d: Error connecting to PostgreSQL: %s\n", i, err)
+			time.Sleep(retryDelay)
+			continue
+		}
+
+		if err := db.Ping(); err != nil {
+			log.Printf("Attempt %d: PostgreSQL ping error: %s\n", i, err)
+			time.Sleep(retryDelay)
+			continue
+		}
+
+		db.SetMaxOpenConns(MaxOpenConnections)
+		db.SetMaxIdleConns(MaxIdleConnections)
+		db.SetConnMaxLifetime(ConnectionMaxLifetime)
+
+		log.Println("The connection to PostgreSQL has been successfully established")
+		return db, nil
 	}
-
-	db.SetMaxOpenConns(25)
-	db.SetMaxIdleConns(25)
-	db.SetConnMaxLifetime(5 * time.Minute)
-
-	if err := db.Ping(); err != nil {
-		return nil, err
-	}
-
-	log.Println("Подключение к PostgreSQL успешно установлено")
-	return db, nil
+	return nil, fmt.Errorf("couldn't connect to the database: %w", err)
 }
