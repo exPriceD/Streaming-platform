@@ -15,6 +15,10 @@ import (
 	"net"
 )
 
+var (
+	network = "tcp"
+)
+
 func main() {
 	cfg, err := config.LoadAuthConfig()
 	if err != nil {
@@ -39,7 +43,7 @@ func main() {
 	authService := service.NewAuthService(userRepo, tokenRepo, jwtManager)
 
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
-	lis, err := net.Listen("tcp", addr)
+	lis, err := net.Listen(network, addr)
 	if err != nil {
 		log.Fatalf("Couldn't start the server: %v", err)
 	}
@@ -47,7 +51,7 @@ func main() {
 	grpcServer := grpc.NewServer()
 	pb.RegisterAuthServiceServer(grpcServer, handler.NewAuthHandler(authService))
 
-	log.Println("Auth-service is running on the port :50051")
+	log.Printf("Auth-service is running on %s - %s", network, addr)
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("Server error: %v", err)
 	}
