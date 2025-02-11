@@ -7,7 +7,7 @@ import (
 )
 
 func LoadYAML() (map[string]interface{}, error) {
-	data, err := os.ReadFile("./config/config.yaml")
+	data, err := os.ReadFile("config.yaml")
 	if err != nil {
 		return nil, fmt.Errorf("couldn't READ the configuration file: %v", err)
 	}
