@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"github.com/exPriceD/Streaming-platform/config"
 	"github.com/exPriceD/Streaming-platform/pkg/db"
@@ -24,6 +25,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("Database connection error: %v", err)
 	}
+	defer func(database *sql.DB) {
+		err := database.Close()
+		if err != nil {
+			log.Fatalf("Couldn't close the database: %v", err)
+		}
+	}(database)
 
 	userRepo := repository.NewUserRepository(database)
 	tokenRepo := repository.NewTokenRepository(database)
