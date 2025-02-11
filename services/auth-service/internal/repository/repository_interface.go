@@ -7,3 +7,9 @@ type TokenRepository interface {
 	GetRefreshToken(tokenStr string) (*entities.RefreshToken, error)
 	RevokeRefreshToken(tokenStr string) error
 }
+
+type UserRepository interface {
+	CreateUser(user *entities.User) error
+	GetUserByEmail(email string) (*entities.User, error)
+	GetUserByUsername(username string) (*entities.User, error)
+}
