@@ -7,9 +7,11 @@ import (
 )
 
 type UserProfile struct {
-	ID        uuid.UUID
-	Username  string
-	Email     string
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID                 uuid.UUID
+	ChannelName        string
+	ChannelDescription string
+	StreamKey          string
+	IsLive             bool
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }
