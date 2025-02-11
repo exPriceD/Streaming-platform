@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"github.com/exPriceD/Streaming-platform/config"
 	"github.com/exPriceD/Streaming-platform/pkg/db"
 	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/handler"
 	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/repository"
@@ -13,18 +15,24 @@ import (
 )
 
 func main() {
-	database, err := db.NewPostgresConnection()
+	cfg, err := config.LoadAuthConfig()
+	if err != nil {
+		log.Fatalf("Couldn't load the configuration: %v", err)
+	}
+
+	database, err := db.NewPostgresConnection(cfg.DB)
 	if err != nil {
 		log.Fatalf("Database connection error: %v", err)
 	}
 
 	userRepo := repository.NewUserRepository(database)
 	tokenRepo := repository.NewTokenRepository(database)
-	jwtManager := token.NewJWTManager()
+	jwtManager := token.NewJWTManager(cfg.JWT)
 
 	authService := service.NewAuthService(userRepo, tokenRepo, jwtManager)
 
-	lis, err := net.Listen("tcp", ":50051")
+	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
+	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Fatalf("Couldn't start the server: %v", err)
 	}

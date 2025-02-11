@@ -2,8 +2,8 @@ package token
 
 import (
 	"errors"
+	"github.com/exPriceD/Streaming-platform/config"
 	"github.com/golang-jwt/jwt/v4"
-	"os"
 	"time"
 )
 
@@ -18,14 +18,11 @@ type UserClaims struct {
 	UserID string `json:"user_id"`
 }
 
-func NewJWTManager() *JWTManager {
-	accessTokenDuration, _ := time.ParseDuration(os.Getenv("ACCESS_TOKEN_DURATION"))
-	refreshTokenDuration, _ := time.ParseDuration(os.Getenv("REFRESH_TOKEN_DURATION"))
-
+func NewJWTManager(JWTConfig config.JWTConfig) *JWTManager {
 	return &JWTManager{
-		secretKey:            os.Getenv("JWT_SECRET"),
-		AccessTokenDuration:  accessTokenDuration,
-		RefreshTokenDuration: refreshTokenDuration,
+		secretKey:            JWTConfig.SecretKey,
+		AccessTokenDuration:  JWTConfig.AccessTokenDuration,
+		RefreshTokenDuration: JWTConfig.RefreshTokenDuration,
 	}
 }
 
