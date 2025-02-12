@@ -4,8 +4,7 @@ import (
 	"net/http"
 
 	"github.com/exPriceD/Streaming-platform/services/streaming-service/internal/service"
-
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 )
 
 // StreamHandler управляет HTTP-запросами для стримов
@@ -14,7 +13,7 @@ type StreamHandler struct {
 }
 
 // NewStreamHandler создает новый обработчик стримов
-func NewStreamHandler(router *gin.Engine, streamService *service.StreamService) {
+func NewStreamHandler(router *echo.Echo, streamService *service.StreamService) {
 	handler := &StreamHandler{streamService: streamService}
 
 	// Регистрируем маршруты API
@@ -27,54 +26,49 @@ func NewStreamHandler(router *gin.Engine, streamService *service.StreamService) 
 }
 
 // StartStream обрабатывает запуск стрима
-func (h *StreamHandler) StartStream(c *gin.Context) {
+func (h *StreamHandler) StartStream(c echo.Context) error {
 	var request struct {
 		UserID      string `json:"user_id"`
 		Title       string `json:"title"`
 		Description string `json:"description"`
 	}
 
-	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный формат запроса"})
-		return
+	if err := c.Bind(&request); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Неверный формат запроса"})
 	}
 
 	stream, err := h.streamService.StartStream(request.UserID, request.Title, request.Description)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
-	c.JSON(http.StatusOK, stream)
+	return c.JSON(http.StatusOK, stream)
 }
 
 // StopStream обрабатывает завершение стрима
-func (h *StreamHandler) StopStream(c *gin.Context) {
+func (h *StreamHandler) StopStream(c echo.Context) error {
 	streamID := c.Param("id")
 
 	err := h.streamService.StopStream(streamID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Стрим завершён"})
+	return c.JSON(http.StatusOK, map[string]string{"message": "Стрим завершён"})
 }
 
 // GetStream получает информацию о стриме
-func (h *StreamHandler) GetStream(c *gin.Context) {
+func (h *StreamHandler) GetStream(c echo.Context) error {
 	streamID := c.Param("id")
 
 	stream, err := h.streamService.GetStream(streamID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 
 	if stream == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Стрим не найден"})
-		return
+		return c.JSON(http.StatusNotFound, map[string]string{"error": "Стрим не найден"})
 	}
 
-	c.JSON(http.StatusOK, stream)
+	return c.JSON(http.StatusOK, stream)
 }
