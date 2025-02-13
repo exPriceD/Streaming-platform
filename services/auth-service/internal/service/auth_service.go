@@ -6,6 +6,7 @@ import (
 	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/entities"
 	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/repository"
 	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/token"
+	"github.com/google/uuid"
 	"time"
 )
 
@@ -43,7 +44,7 @@ func (s *AuthService) Register(username, email, password string, consent bool) (
 		return nil, "", "", err
 	}
 
-	accessToken, refreshToken, err := s.generateTokens(user.ID.String())
+	accessToken, refreshToken, err := s.generateTokens(user.ID)
 	if err != nil {
 		return nil, "", "", err
 	}
@@ -69,7 +70,7 @@ func (s *AuthService) Authenticate(identifier, password string, isEmail bool) (*
 		return nil, "", "", errors.New("invalid password")
 	}
 
-	accessToken, refreshToken, err := s.generateTokens(user.ID.String())
+	accessToken, refreshToken, err := s.generateTokens(user.ID)
 	if err != nil {
 		return nil, "", "", err
 	}
@@ -96,12 +97,14 @@ func (s *AuthService) RefreshTokens(refreshTokenStr string) (string, string, err
 		return "", "", err
 	}
 
-	_ = s.tokenRepo.RevokeRefreshToken(refreshTokenStr)
-
+	err = s.tokenRepo.RevokeRefreshToken(refreshTokenStr)
+	if err != nil {
+		return "", "", errors.New("RevokeRefreshToken error")
+	}
 	return accessToken, newRefreshToken, nil
 }
 
-func (s *AuthService) generateTokens(userID string) (string, string, error) {
+func (s *AuthService) generateTokens(userID uuid.UUID) (string, string, error) {
 	accessToken, refreshToken, err := s.jwtManager.GenerateTokens(userID)
 	if err != nil {
 		return "", "", err
@@ -122,16 +125,34 @@ func (s *AuthService) generateTokens(userID string) (string, string, error) {
 	return accessToken, refreshToken, nil
 }
 
-func (s *AuthService) ValidateAccessToken(accessToken string) (string, error) {
+func (s *AuthService) ValidateAccessToken(accessToken string) (uuid.UUID, error) {
 	claims, err := s.jwtManager.ValidateAccessToken(accessToken)
 	if err != nil {
 		if err.Error() == "token is expired" {
-			return "", ErrTokenExpired
+			return uuid.Nil, ErrTokenExpired
 		}
-		return "", ErrTokenInvalid
+		return uuid.Nil, ErrTokenInvalid
 	}
 
 	return claims.UserID, nil
+}
+
+func (s *AuthService) Logout(refreshToken string) error {
+	storedToken, err := s.tokenRepo.GetRefreshToken(refreshToken)
+	if err != nil {
+		return err
+	}
+
+	if storedToken.Revoked {
+		return nil
+	}
+
+	err = s.tokenRepo.RevokeRefreshToken(refreshToken)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *AuthService) startTokenCleanupRoutine() {

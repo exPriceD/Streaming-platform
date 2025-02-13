@@ -84,8 +84,38 @@ func (h *AuthHandler) ValidateToken(ctx context.Context, req *pb.ValidateTokenRe
 
 	return &pb.ValidateTokenResponse{
 		Valid:  true,
-		UserId: userID,
+		UserId: userID.String(),
 	}, nil
+}
+
+func (h *AuthHandler) RefreshToken(ctx context.Context, req *pb.RefreshTokenRequest) (*pb.RefreshTokenResponse, error) {
+	newAccessToken, newRefreshToken, err := h.authService.RefreshTokens(req.RefreshToken)
+	if err != nil {
+		return &pb.RefreshTokenResponse{
+			Error: mapErrorToProto(err),
+		}, err
+	}
+
+	return &pb.RefreshTokenResponse{
+		AccessToken:  newAccessToken,
+		RefreshToken: newRefreshToken,
+		ExpiresIn:    3600,
+	}, nil
+}
+
+func (h *AuthHandler) Logout(ctx context.Context, req *pb.LogoutRequest) (*pb.LogoutResponse, error) {
+	err := h.authService.Logout(req.RefreshToken)
+	if err != nil {
+		return &pb.LogoutResponse{
+			Success: false,
+			Error: &pb.Error{
+				Code:    pb.ErrorCode_INTERNAL_ERROR,
+				Message: err.Error(),
+			},
+		}, err
+	}
+
+	return &pb.LogoutResponse{Success: true}, nil
 }
 
 func mapErrorToProto(err error) *pb.Error {
