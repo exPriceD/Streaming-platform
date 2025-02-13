@@ -1,10 +1,13 @@
 package entities
 
-import "time"
+import (
+	"github.com/google/uuid"
+	"time"
+)
 
 type RefreshToken struct {
 	ID        int
-	UserID    string
+	UserID    uuid.UUID
 	Token     string
 	ExpiresAt time.Time
 	Revoked   bool

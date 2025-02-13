@@ -20,7 +20,7 @@ func NewTokenRepository(db *sql.DB) TokenRepository {
 func (r *tokenRepository) SaveRefreshToken(token *entities.RefreshToken) error {
 	query := `
         INSERT INTO refresh_tokens (user_id, token, expires_at, revoked, created_at)
-        VALUES ($1, $2, $3, $4)
+        VALUES ($1, $2, $3, $4, $5)
     `
 	_, err := r.db.Exec(query, token.UserID, token.Token, token.ExpiresAt, false, token.CreatedAt)
 	return err
