@@ -26,28 +26,33 @@ func NewJWTManager(JWTConfig config.JWTConfig) *JWTManager {
 	}
 }
 
-func (m *JWTManager) GenerateAccessToken(userID string) (string, error) {
-	claims := UserClaims{
+func (m *JWTManager) GenerateTokens(userID string) (string, string, error) {
+	accessClaims := UserClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(m.AccessTokenDuration)),
 		},
 		UserID: userID,
 	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(m.secretKey))
-}
-
-func (m *JWTManager) GenerateRefreshToken() (string, error) {
-	claims := jwt.RegisteredClaims{
-		ExpiresAt: jwt.NewNumericDate(time.Now().Add(m.RefreshTokenDuration)),
+	accessToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims).SignedString([]byte(m.secretKey))
+	if err != nil {
+		return "", "", err
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(m.secretKey))
+	refreshClaims := UserClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(m.RefreshTokenDuration)),
+		},
+		UserID: userID,
+	}
+	refreshToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims).SignedString([]byte(m.secretKey))
+	if err != nil {
+		return "", "", err
+	}
+
+	return accessToken, refreshToken, nil
 }
 
-func (m *JWTManager) ValidateToken(accessToken string) (*UserClaims, error) {
+func (m *JWTManager) ValidateAccessToken(accessToken string) (*UserClaims, error) {
 	token, err := jwt.ParseWithClaims(accessToken, &UserClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(m.secretKey), nil
 	})
@@ -59,6 +64,23 @@ func (m *JWTManager) ValidateToken(accessToken string) (*UserClaims, error) {
 	claims, ok := token.Claims.(*UserClaims)
 	if !ok {
 		return nil, errors.New("incorrect data in the token")
+	}
+
+	return claims, nil
+}
+
+func (m *JWTManager) ValidateRefreshToken(refreshToken string) (*UserClaims, error) {
+	token, err := jwt.ParseWithClaims(refreshToken, &UserClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(m.secretKey), nil
+	})
+
+	if err != nil || !token.Valid {
+		return nil, errors.New("недействительный refresh_token")
+	}
+
+	claims, ok := token.Claims.(*UserClaims)
+	if !ok {
+		return nil, errors.New("некорректные данные в refresh_token")
 	}
 
 	return claims, nil
