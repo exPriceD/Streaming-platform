@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/exPriceD/Streaming-platform/config"
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/google/uuid"
 	"time"
 )
 
@@ -15,7 +16,7 @@ type JWTManager struct {
 
 type UserClaims struct {
 	jwt.RegisteredClaims
-	UserID string `json:"user_id"`
+	UserID uuid.UUID `json:"user_id"`
 }
 
 func NewJWTManager(JWTConfig config.JWTConfig) *JWTManager {
@@ -26,10 +27,11 @@ func NewJWTManager(JWTConfig config.JWTConfig) *JWTManager {
 	}
 }
 
-func (m *JWTManager) GenerateTokens(userID string) (string, string, error) {
+func (m *JWTManager) GenerateTokens(userID uuid.UUID) (string, string, error) {
 	accessClaims := UserClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(m.AccessTokenDuration)),
+			ID:        uuid.New().String(),
 		},
 		UserID: userID,
 	}
@@ -41,6 +43,7 @@ func (m *JWTManager) GenerateTokens(userID string) (string, string, error) {
 	refreshClaims := UserClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(m.RefreshTokenDuration)),
+			ID:        uuid.New().String(),
 		},
 		UserID: userID,
 	}
