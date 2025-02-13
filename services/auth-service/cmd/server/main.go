@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"github.com/exPriceD/Streaming-platform/config"
 	"github.com/exPriceD/Streaming-platform/pkg/db"
+	"github.com/exPriceD/Streaming-platform/pkg/logger"
 	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/handler"
 	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/repository"
 	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/service"
 	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/token"
 	pb "github.com/exPriceD/Streaming-platform/services/auth-service/proto"
 	"google.golang.org/grpc"
-	"log"
+	"log/slog"
 	"net"
 )
 
@@ -20,19 +21,25 @@ var (
 )
 
 func main() {
+	log := logger.InitLogger("auth-service")
+
 	cfg, err := config.LoadAuthConfig()
 	if err != nil {
-		log.Fatalf("Couldn't load the configuration: %v", err)
+		log.Error("❌ Couldn't load the configuration", slog.String("error", err.Error()))
 	}
+	log.Info("✅ Configuration loaded successfully")
 
 	database, err := db.NewPostgresConnection(cfg.DB)
 	if err != nil {
-		log.Fatalf("Database connection error: %v", err)
+		log.Error("❌ Database connection error: %v", err)
+		return
 	}
 	defer func(database *sql.DB) {
 		err := database.Close()
 		if err != nil {
-			log.Fatalf("Couldn't close the database: %v", err)
+			log.Error("Couldn't close the database", slog.String("error", err.Error()))
+		} else {
+			log.Info("✅ The database connection is closed")
 		}
 	}(database)
 
@@ -42,17 +49,19 @@ func main() {
 
 	authService := service.NewAuthService(userRepo, tokenRepo, jwtManager)
 
+	log.Info("🔧 Repositories and services are initialized")
+
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
 	lis, err := net.Listen(network, addr)
 	if err != nil {
-		log.Fatalf("Couldn't start the server: %v", err)
+		log.Error("❌ Couldn't start the server", slog.String("error", err.Error()))
 	}
 
 	grpcServer := grpc.NewServer()
 	pb.RegisterAuthServiceServer(grpcServer, handler.NewAuthHandler(authService))
 
-	log.Printf("Auth-service is running on %s - %s", network, addr)
+	log.Info("🚀 Auth-service is running", slog.String("network", network), slog.String("address", addr))
 	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatalf("Server error: %v", err)
+		log.Error("❌ Server error", slog.String("error", err.Error()))
 	}
 }
