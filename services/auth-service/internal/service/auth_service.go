@@ -72,34 +72,53 @@ func (s *AuthService) Authenticate(identifier, password string, isEmail bool) (*
 	return user, accessToken, refreshToken, nil
 }
 
+func (s *AuthService) RefreshTokens(refreshTokenStr string) (string, string, error) {
+	refreshToken, err := s.tokenRepo.GetRefreshToken(refreshTokenStr)
+	if err != nil {
+		return "", "", err
+	}
+
+	if refreshToken.Revoked {
+		return "", "", errors.New("refresh token has been revoked")
+	}
+
+	if time.Now().After(refreshToken.ExpiresAt) {
+		return "", "", errors.New("refresh token expired")
+	}
+
+	accessToken, newRefreshToken, err := s.generateTokens(refreshToken.UserID)
+	if err != nil {
+		return "", "", err
+	}
+
+	_ = s.tokenRepo.RevokeRefreshToken(refreshTokenStr)
+
+	return accessToken, newRefreshToken, nil
+}
+
 func (s *AuthService) generateTokens(userID string) (string, string, error) {
-	accessToken, err := s.jwtManager.GenerateAccessToken(userID)
+	accessToken, refreshToken, err := s.jwtManager.GenerateTokens(userID)
 	if err != nil {
 		return "", "", err
 	}
 
-	refreshTokenStr, err := s.jwtManager.GenerateRefreshToken()
-	if err != nil {
-		return "", "", err
-	}
-
-	refreshToken := &entities.RefreshToken{
+	refreshTokenEntity := &entities.RefreshToken{
 		UserID:    userID,
-		Token:     refreshTokenStr,
+		Token:     refreshToken,
 		ExpiresAt: time.Now().Add(s.jwtManager.RefreshTokenDuration),
 		Revoked:   false,
 		CreatedAt: time.Now(),
 	}
 
-	if err := s.tokenRepo.SaveRefreshToken(refreshToken); err != nil {
+	if err := s.tokenRepo.SaveRefreshToken(refreshTokenEntity); err != nil {
 		return "", "", err
 	}
 
-	return accessToken, refreshTokenStr, nil
+	return accessToken, refreshToken, nil
 }
 
 func (s *AuthService) ValidateAccessToken(accessToken string) (string, error) {
-	claims, err := s.jwtManager.ValidateToken(accessToken)
+	claims, err := s.jwtManager.ValidateAccessToken(accessToken)
 	if err != nil {
 		if err.Error() == "token is expired" {
 			return "", ErrTokenExpired
@@ -108,13 +127,4 @@ func (s *AuthService) ValidateAccessToken(accessToken string) (string, error) {
 	}
 
 	return claims.UserID, nil
-}
-
-func (s *AuthService) RefreshTokens(refreshTokenStr string) (string, error) {
-	refreshToken, err := s.tokenRepo.GetRefreshToken(refreshTokenStr)
-	if err != nil {
-		return "", err
-	}
-
-	return s.jwtManager.GenerateAccessToken(refreshToken.UserID)
 }
