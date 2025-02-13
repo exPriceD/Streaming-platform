@@ -12,6 +12,7 @@ service AuthService {
   rpc Login(LoginRequest) returns (LoginResponse);                // Аутентифицирует пользователя
   rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse); // Проверяет корректность access_token
   rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse); // Обновление access_token
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
 }
 
 // Перечисление для обозначения пола пользователя.
@@ -98,4 +99,13 @@ message RefreshTokenResponse {
   string refresh_token = 2; // Новый refresh_token
   int64 expires_in = 3;     // Время жизни нового access_token в секундах
   Error error = 4;          // Ошибка, если refresh_token недействителен
+}
+
+message LogoutRequest {
+  string refresh_token = 1; // Refresh-токен, который хотим отозвать
+}
+
+message LogoutResponse {
+  bool success = 1;  // true, если выход выполнен успешно
+  Error error = 2;   // Ошибка, если что-то пошло не так
 }
