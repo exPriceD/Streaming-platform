@@ -31,7 +31,7 @@ func main() {
 
 	database, err := db.NewPostgresConnection(cfg.DB)
 	if err != nil {
-		log.Error("❌ Database connection error: %v", err)
+		log.Error("❌ Database connection error", slog.String("error", err.Error()))
 		return
 	}
 	defer func(database *sql.DB) {
