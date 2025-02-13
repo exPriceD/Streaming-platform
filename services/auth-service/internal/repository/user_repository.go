@@ -19,13 +19,13 @@ func NewUserRepository(db *sql.DB) UserRepository {
 
 func (r *userRepository) CreateUser(user *entities.User) error {
 	query := `
-		INSERT INTO users (id, email, password_hash, consent_to_data_processing, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO users (id, username, email, password_hash, consent_to_data_processing, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 
 	now := time.Now()
 
-	_, err := r.db.Exec(query, user.ID, user.Email, user.PasswordHash, user.ConsentToDataProcessing, now, now)
+	_, err := r.db.Exec(query, user.ID, user.Username, user.Email, user.PasswordHash, user.ConsentToDataProcessing, now, now)
 
 	if err != nil {
 		var pqErr *pq.Error
