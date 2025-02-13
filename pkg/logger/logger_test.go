@@ -18,7 +18,7 @@ func TestLogger(t *testing.T) {
 
 	time.Sleep(500 * time.Millisecond)
 
-	logDir := "services/test-service/logs"
+	logDir := "logs"
 	logFilePath := logDir + "/test-service.log"
 	jsonLogFilePath := logDir + "/test-service.json"
 
