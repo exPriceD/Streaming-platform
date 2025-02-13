@@ -1,5 +1,7 @@
 github.com/exPriceD/Streaming-platform v0.0.0-20250213172337-29ac0b5943ab h1:R/vXqBzCMo8D37d9UHI1yKCQj8FJXxMs8LuDL9lO+pA=
 github.com/exPriceD/Streaming-platform v0.0.0-20250213172337-29ac0b5943ab/go.mod h1:PlZMRr/z6lRfvMJJTETuJCNc7cnE6RffO3881MFck38=
+github.com/exPriceD/Streaming-platform v0.0.0-20250213202552-d214643f2497 h1:5LAiV+DjyEySE9j1YliJL1XLfXoCm9LiT5mueCLTerk=
+github.com/exPriceD/Streaming-platform v0.0.0-20250213202552-d214643f2497/go.mod h1:PlZMRr/z6lRfvMJJTETuJCNc7cnE6RffO3881MFck38=
 github.com/go-logr/logr v1.4.2 h1:6pFjapn8bFcIbiKo3XT4j/BhANplGihG6tvd+8rYgrY=
 github.com/go-logr/logr v1.4.2/go.mod h1:9T104GzyrTigFIr8wt5mBrctHMim0Nb2HLGrmQ40KvY=
 github.com/go-logr/stdr v1.2.2 h1:hSWxHoqTgW2S2qGc0LTAI563KZ5YKYRhT3MFKZMbjag=
