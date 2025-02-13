@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/entities"
 	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/models"
 	"time"
@@ -51,6 +52,18 @@ func (r *tokenRepository) RevokeRefreshToken(tokenStr string) error {
     `
 	_, err := r.db.Exec(query, tokenStr)
 	return err
+}
+
+func (r *tokenRepository) DeleteExpiredRefreshTokens() error {
+	query := `DELETE FROM refresh_tokens WHERE expires_at < NOW()`
+	result, err := r.db.Exec(query)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	fmt.Printf("Удалены устаревшие refresh_tokens - %d шт.", rowsAffected)
+	return nil
 }
 
 func mapTokenModelToEntity(tokenModel *models.RefreshTokenModel) *entities.RefreshToken {

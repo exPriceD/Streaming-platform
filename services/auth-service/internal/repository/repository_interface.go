@@ -6,6 +6,7 @@ type TokenRepository interface {
 	SaveRefreshToken(token *entities.RefreshToken) error
 	GetRefreshToken(tokenStr string) (*entities.RefreshToken, error)
 	RevokeRefreshToken(tokenStr string) error
+	DeleteExpiredRefreshTokens() error
 }
 
 type UserRepository interface {
