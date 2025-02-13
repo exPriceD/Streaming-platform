@@ -65,11 +65,11 @@ func formatTime() string {
 func colorize(level slog.Level, message string) string {
 	switch level {
 	case slog.LevelInfo:
-		return fmt.Sprintf("\033[32m%s\033[0m", message) // 🟢 Зелёный для INFO
+		return fmt.Sprintf("%s", message) // 🟢 Добавить зелёный для INFO
 	case slog.LevelWarn:
-		return fmt.Sprintf("\033[33m%s\033[0m", message) // 🟠 Жёлтый для WARN
+		return fmt.Sprintf("%s", message) // 🟠 Добавить жёлтый для WARN
 	case slog.LevelError:
-		return fmt.Sprintf("\033[31m%s\033[0m", message) // 🔴 Красный для ERROR
+		return fmt.Sprintf("%s", message) // 🔴 Добавить красный для ERROR
 	default:
 		return message
 	}
@@ -114,7 +114,7 @@ func InitLogger(serviceName string) *slog.Logger {
 			}
 			return a
 		},
-		AddSource: true,
+		AddSource: false,
 	})
 
 	fileHandler := slog.NewTextHandler(logFile, &slog.HandlerOptions{
