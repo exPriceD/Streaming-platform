@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/entities"
 	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/repository"
 	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/token"
@@ -20,11 +21,15 @@ type AuthService struct {
 }
 
 func NewAuthService(userRepo repository.UserRepository, tokenRepo repository.TokenRepository, jwtManager *token.JWTManager) *AuthService {
-	return &AuthService{
+	service := &AuthService{
 		userRepo:   userRepo,
 		tokenRepo:  tokenRepo,
 		jwtManager: jwtManager,
 	}
+
+	go service.startTokenCleanupRoutine()
+
+	return service
 }
 
 func (s *AuthService) Register(username, email, password string, consent bool) (*entities.User, string, string, error) {
@@ -127,4 +132,18 @@ func (s *AuthService) ValidateAccessToken(accessToken string) (string, error) {
 	}
 
 	return claims.UserID, nil
+}
+
+func (s *AuthService) startTokenCleanupRoutine() {
+	ticker := time.NewTicker(24 * time.Hour)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			if err := s.tokenRepo.DeleteExpiredRefreshTokens(); err != nil {
+				fmt.Println("refresh_tokens cleanup error")
+			}
+		}
+	}
 }
