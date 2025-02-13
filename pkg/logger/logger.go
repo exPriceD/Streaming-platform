@@ -84,10 +84,10 @@ func InitLogger(serviceName string) *slog.Logger {
 		return logger
 	}
 
-	logDir := filepath.Join("services", serviceName, "logs")
+	logDir := "logs"
 	err := os.MkdirAll(logDir, 0755)
 	if err != nil {
-		panic(fmt.Sprintf("Ошибка создания папки логов: %v", err))
+		panic(fmt.Sprintf("Error creating the logs folder: %v", err))
 	}
 
 	logFilePath := filepath.Join(logDir, fmt.Sprintf("%s.log", serviceName))
@@ -95,12 +95,12 @@ func InitLogger(serviceName string) *slog.Logger {
 
 	logFile, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		panic(fmt.Sprintf("Ошибка создания текстового лог-файла: %v", err))
+		panic(fmt.Sprintf("Error creating a text log file: %v", err))
 	}
 
 	jsonFile, err := os.OpenFile(jsonLogFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		panic(fmt.Sprintf("Ошибка создания JSON лог-файла: %v", err))
+		panic(fmt.Sprintf("Error creating a JSON log file: %v", err))
 	}
 
 	consoleHandler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
