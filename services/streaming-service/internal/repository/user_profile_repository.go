@@ -6,16 +6,15 @@ import (
 
 	"github.com/exPriceD/Streaming-platform/services/streaming-service/internal/models"
 	"github.com/google/uuid"
-	"github.com/jmoiron/sqlx"
 )
 
-// UserProfileRepository реализует UserProfileRepositoryInterface.
+// UserProfileRepository реализует доступ к профилям пользователей в БД.
 type UserProfileRepository struct {
-	db *sqlx.DB
+	db *sql.DB
 }
 
 // NewUserProfileRepository создаёт новый репозиторий профилей пользователей.
-func NewUserProfileRepository(db *sqlx.DB) *UserProfileRepository {
+func NewUserProfileRepository(db *sql.DB) *UserProfileRepository {
 	return &UserProfileRepository{db: db}
 }
 
@@ -29,13 +28,19 @@ func (r *UserProfileRepository) CreateUserProfile(profile models.UserProfile) er
 
 // GetUserProfileByID получает профиль пользователя по ID.
 func (r *UserProfileRepository) GetUserProfileByID(id uuid.UUID) (*models.UserProfile, error) {
-	var profile models.UserProfile
 	query := `SELECT id, channel_name, channel_description, stream_key, is_live, created_at, updated_at FROM user_profiles WHERE id = $1`
-	err := r.db.Get(&profile, query, id)
-	if err == sql.ErrNoRows {
-		return nil, errors.New("user profile not found")
+	row := r.db.QueryRow(query, id)
+
+	var profile models.UserProfile
+	err := row.Scan(&profile.ID, &profile.ChannelName, &profile.ChannelDescription, &profile.StreamKey, &profile.IsLive, &profile.CreatedAt, &profile.UpdatedAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errors.New("user profile not found")
+		}
+		return nil, err
 	}
-	return &profile, err
+
+	return &profile, nil
 }
 
 // UpdateUserProfile обновляет данные профиля пользователя.
