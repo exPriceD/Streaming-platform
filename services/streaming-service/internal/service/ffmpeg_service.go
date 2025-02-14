@@ -2,8 +2,10 @@ package service
 
 import (
 	"fmt"
+	"log"
 	"os/exec"
 	"sync"
+	"time"
 )
 
 // FFmpegService управляет процессами FFmpeg для трансляций.
@@ -75,4 +77,17 @@ func (s *FFmpegService) StopStream(streamID string) error {
 	// Удаляем процесс из мапы.
 	delete(s.processes, streamID)
 	return nil
+}
+
+// monitorProcess отслеживает завершение процесса FFmpeg.
+func (f *FFmpegService) monitorProcess(streamID string, cmd *exec.Cmd) {
+	err := cmd.Wait()
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	delete(f.processes, streamID)
+	if err != nil {
+		log.Printf("FFmpeg процесс для стрима %s завершился с ошибкой: %v", streamID, err)
+		time.Sleep(3 * time.Second)
+		log.Println("Перезапуск FFmpeg...")
+	}
 }
