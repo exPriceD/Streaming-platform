@@ -1,6 +1,7 @@
 package service
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"log"
@@ -18,6 +19,7 @@ type StreamService struct {
 	userProfileRepo repository.UserProfileRepositoryInterface
 	// Базовый URL RTMP-сервера, например: "rtmp://localhost/live"
 	rtmpServerURL string
+	db            *sql.DB
 }
 
 // NewStreamService создает новый экземпляр StreamService с необходимыми зависимостями.
@@ -125,4 +127,16 @@ func (s *StreamService) GetStream(streamID string) (*models.Stream, error) {
 		return nil, errors.New("некорректный UUID стрима")
 	}
 	return s.streamRepo.GetStreamByID(id)
+}
+
+// UpdateStreamStatus обновляет статус стрима в базе данных.
+// Например, если RTMP-сервер отправляет событие on_publish, статус будет "LIVE",
+// а при on_publish_done – "OFFLINE".
+func (s *StreamService) UpdateStreamStatus(streamID, status string) error {
+	_, err := s.db.Exec("UPDATE streams SET status = $1 WHERE id = $2", status, streamID)
+	if err != nil {
+		log.Printf("Ошибка обновления статуса стрима (ID: %s) на %s: %v", streamID, status, err)
+		return errors.New("не удалось обновить статус стрима")
+	}
+	return nil
 }
