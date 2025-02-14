@@ -4,19 +4,17 @@ import (
 	"net/http"
 
 	"github.com/exPriceD/Streaming-platform/services/streaming-service/internal/service"
-	auth "github.com/exPriceD/Streaming-platform/services/streaming-service/internal/token"
 	"github.com/labstack/echo/v4"
 )
 
 // StreamHandler управляет HTTP-запросами для стримов
 type StreamHandler struct {
 	streamService *service.StreamService
-	jwtManager    *auth.JWTManager
 }
 
 // NewStreamHandler создаёт новый обработчик стримов
-func NewStreamHandler(e *echo.Echo, streamService *service.StreamService, jwtManager *auth.JWTManager) {
-	handler := &StreamHandler{streamService: streamService, jwtManager: jwtManager}
+func NewStreamHandler(e *echo.Echo, streamService *service.StreamService) {
+	handler := &StreamHandler{streamService: streamService}
 
 	streams := e.Group("/streams")
 	{
@@ -26,16 +24,11 @@ func NewStreamHandler(e *echo.Echo, streamService *service.StreamService, jwtMan
 	}
 }
 
-// StartStream обрабатывает запуск стрима (требуется JWT)
+// StartStream обрабатывает запуск стрима (аутентификация через API Gateway)
 func (h *StreamHandler) StartStream(c echo.Context) error {
-	token := c.Request().Header.Get("Authorization")
-	if token == "" {
-		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "токен отсутствует"})
-	}
-
-	userID, err := h.jwtManager.VerifyToken(token)
-	if err != nil {
-		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "неверный токен"})
+	userID := c.Request().Header.Get("X-User-ID")
+	if userID == "" {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "отсутствует идентификатор пользователя"})
 	}
 
 	var request struct {
@@ -55,20 +48,15 @@ func (h *StreamHandler) StartStream(c echo.Context) error {
 	return c.JSON(http.StatusOK, stream)
 }
 
-// StopStream завершает стрим (требуется JWT)
+// StopStream завершает стрим (аутентификация через API Gateway)
 func (h *StreamHandler) StopStream(c echo.Context) error {
-	token := c.Request().Header.Get("Authorization")
-	if token == "" {
-		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "токен отсутствует"})
-	}
-
-	_, err := h.jwtManager.VerifyToken(token)
-	if err != nil {
-		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "неверный токен"})
+	userID := c.Request().Header.Get("X-User-ID")
+	if userID == "" {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "отсутствует идентификатор пользователя"})
 	}
 
 	streamID := c.Param("id")
-	err = h.streamService.StopStream(streamID)
+	err := h.streamService.StopStream(streamID)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}

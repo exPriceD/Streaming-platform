@@ -22,10 +22,6 @@ streaming_service:
     password: stream_password
     name: stream_db
     ssl_mode: disable
-  jwt:
-    secret_key: super_secret_key
-    access_token_duration: 15m
-    refresh_token_duration: 168h  # 7 дней
   server:
     host: 0.0.0.0
     port: 8080

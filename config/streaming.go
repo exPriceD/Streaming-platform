@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"time"
 
 	"gopkg.in/yaml.v2"
 )
@@ -10,7 +9,6 @@ import (
 // StreamingServiceConfig — общая конфигурация streaming-service
 type StreamingServiceConfig struct {
 	DB     DBConfig     `yaml:"db"`
-	JWT    JWTConfig    `yaml:"jwt"`
 	Server ServerConfig `yaml:"server"`
 }
 
@@ -35,10 +33,6 @@ func LoadStreamingConfig() (*StreamingServiceConfig, error) {
 	if err := yaml.Unmarshal(streamingServiceData, &streamingConfig); err != nil {
 		return nil, fmt.Errorf("ошибка парсинга streaming_service: %v", err)
 	}
-
-	// Преобразуем продолжительность токенов в time.Duration
-	streamingConfig.JWT.AccessTokenDuration *= time.Minute
-	streamingConfig.JWT.RefreshTokenDuration *= time.Hour
 
 	return &streamingConfig, nil
 }
