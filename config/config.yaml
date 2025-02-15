@@ -13,3 +13,15 @@ auth_service:
   server:
     host: 0.0.0.0
     port: 50051
+
+streaming_service:
+  db:
+    host: localhost
+    port: 5432
+    user: stream_user
+    password: stream_password
+    name: stream_db
+    ssl_mode: disable
+  server:
+    host: 0.0.0.0
+    port: 8080
