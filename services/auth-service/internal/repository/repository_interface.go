@@ -1,10 +1,10 @@
 package repository
 
-import "github.com/exPriceD/Streaming-platform/services/auth-service/internal/entities"
+import "github.com/exPriceD/Streaming-platform/services/auth-service/internal/entity"
 
 type TokenRepository interface {
-	SaveRefreshToken(token *entities.RefreshToken) error
-	GetRefreshToken(tokenStr string) (*entities.RefreshToken, error)
+	SaveRefreshToken(token *entity.RefreshToken) error
+	GetRefreshToken(tokenStr string) (*entity.RefreshToken, error)
 	RevokeRefreshToken(tokenStr string) error
 	DeleteExpiredRefreshTokens() error
 }

@@ -3,7 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
-	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/entities"
+	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/entity"
 	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/repository"
 	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/token"
 	"github.com/google/uuid"
@@ -73,7 +73,7 @@ func (s *AuthService) GenerateTokens(userID uuid.UUID) (string, string, int64, t
 		return "", "", 0, time.Time{}, err
 	}
 
-	refreshTokenEntity := &entities.RefreshToken{
+	refreshTokenEntity := &entity.RefreshToken{
 		UserID:    userID,
 		Token:     refreshToken,
 		ExpiresAt: time.Now().Add(s.jwtManager.RefreshTokenDuration),

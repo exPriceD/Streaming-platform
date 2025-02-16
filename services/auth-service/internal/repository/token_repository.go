@@ -3,7 +3,7 @@ package repository
 import (
 	"database/sql"
 	"errors"
-	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/entities"
+	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/entity"
 	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/models"
 	"log"
 )
@@ -20,7 +20,7 @@ func NewTokenRepository(db *sql.DB) TokenRepository {
 	return &tokenRepository{db: db}
 }
 
-func (r *tokenRepository) SaveRefreshToken(token *entities.RefreshToken) error {
+func (r *tokenRepository) SaveRefreshToken(token *entity.RefreshToken) error {
 	query := `
         INSERT INTO refresh_tokens (user_id, token, expires_at, revoked, created_at)
         VALUES ($1, $2, $3, $4, $5)
@@ -30,13 +30,13 @@ func (r *tokenRepository) SaveRefreshToken(token *entities.RefreshToken) error {
 	return err
 }
 
-func (r *tokenRepository) GetRefreshToken(tokenStr string) (*entities.RefreshToken, error) {
+func (r *tokenRepository) GetRefreshToken(tokenStr string) (*entity.RefreshToken, error) {
 	query := `
         SELECT id, user_id, token, expires_at, revoked, created_at
         FROM refresh_tokens
         WHERE token = $1
     `
-	var token entities.RefreshToken
+	var token entity.RefreshToken
 	err := r.db.QueryRow(query, tokenStr).Scan(&token.ID, &token.UserID, &token.Token, &token.ExpiresAt, &token.Revoked, &token.CreatedAt)
 
 	if errors.Is(err, sql.ErrNoRows) {
@@ -82,8 +82,8 @@ func (r *tokenRepository) DeleteExpiredRefreshTokens() error {
 	return nil
 }
 
-func mapTokenModelToEntity(tokenModel *models.RefreshTokenModel) *entities.RefreshToken {
-	return &entities.RefreshToken{
+func mapTokenModelToEntity(tokenModel *models.RefreshTokenModel) *entity.RefreshToken {
+	return &entity.RefreshToken{
 		ID:        tokenModel.ID,
 		UserID:    tokenModel.UserID,
 		Token:     tokenModel.Token,
