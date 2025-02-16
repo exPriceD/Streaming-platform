@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/exPriceD/Streaming-platform/config"
+	_ "github.com/lib/pq"
 	"log"
 	"time"
 )
