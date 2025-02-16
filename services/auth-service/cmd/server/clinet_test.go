@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 	pb "github.com/exPriceD/Streaming-platform/services/auth-service/proto"
+	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/protobuf/types/known/timestamppb"
 	"log"
 	"testing"
 )
+
+const authServiceAddr = "localhost:50051"
 
 func TestClient(t *testing.T) {
 	// Подключаемся к gRPC-серверу
@@ -26,59 +28,59 @@ func TestClient(t *testing.T) {
 
 	client := pb.NewAuthServiceClient(conn)
 
-	// Тестируем регистрацию
-	registerReq := &pb.RegisterRequest{
-		Username:                "admin_tester",
-		Email:                   "tester@example.com",
-		Password:                "password123",
-		Birthday:                timestamppb.Now(),
-		Gender:                  pb.Gender_GENDER_MALE,
-		ConsentToDataProcessing: true,
-	}
-	registerResp, err := client.Register(context.Background(), registerReq)
-	if err != nil {
-		log.Fatalf("Ошибка регистрации: %v", err)
-	}
-	fmt.Println("✅ Успешная регистрация:", registerResp)
+	// 🔹 Шаг 1: Генерация токенов
+	fmt.Println("\n🔹 Генерация токенов")
 
-	// Тестируем выход
-	logoutReq := &pb.LogoutRequest{
-		RefreshToken: registerResp.RefreshToken,
-	}
-	logoutResp, err := client.Logout(context.Background(), logoutReq)
-	if err != nil {
-		log.Fatalf("Ошибка выхода: %v", err)
-	}
-	fmt.Println("✅ Успешный выход:", logoutResp)
+	userID := "550e8400-e29b-41d4-a716-446655440000"
+	generateReq := &pb.AuthenticateRequest{UserId: userID}
+	generateResp, err := runTestCase(t, "GenerateTokens", func() (*pb.AuthenticateResponse, error) {
+		return client.Authenticate(context.Background(), generateReq)
+	})
 
-	// Тестируем логин
-	loginReq := &pb.LoginRequest{
-		LoginIdentifier: &pb.LoginRequest_Email{Email: "tester@example.com"},
-		Password:        "password123",
-	}
-	loginResp, err := client.Login(context.Background(), loginReq)
-	if err != nil {
-		log.Fatalf("Ошибка логина: %v", err)
-	}
-	fmt.Println("✅ Успешный вход:", loginResp)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, generateResp.AccessToken)
+	assert.NotEmpty(t, generateResp.RefreshToken)
 
-	// Тестируем валидацию токена
-	validateReq := &pb.ValidateTokenRequest{
-		AccessToken: loginResp.AccessToken,
-	}
-	validateResp, err := client.ValidateToken(context.Background(), validateReq)
-	if err != nil {
-		log.Fatalf("Ошибка валидации токена: %v", err)
-	}
-	fmt.Println("✅ Проверка access_token:", validateResp)
+	// 🔹 Шаг 2: Валидация access_token
+	fmt.Println("\n🔹 Валидация access_token")
+	validateReq := &pb.ValidateTokenRequest{AccessToken: generateResp.AccessToken}
 
-	// Тестируем обновление токена
-	refreshReq := &pb.RefreshTokenRequest{
-		RefreshToken: loginResp.RefreshToken,
-	}
-	refreshResp, err := client.RefreshToken(context.Background(), refreshReq)
+	validateResp, err := runTestCase(t, "ValidateToken", func() (*pb.ValidateTokenResponse, error) {
+		return client.ValidateToken(context.Background(), validateReq)
+	})
+	assert.NoError(t, err)
+	assert.True(t, validateResp.Valid)
+	assert.Equal(t, userID, validateResp.UserId)
+
+	// 🔹 Шаг 3: Обновление токенов
+	fmt.Println("\n🔹 Обновление access_token")
+	refreshReq := &pb.RefreshTokenRequest{RefreshToken: generateResp.RefreshToken}
+
+	refreshResp, err := runTestCase(t, "RefreshToken", func() (*pb.RefreshTokenResponse, error) {
+		return client.RefreshToken(context.Background(), refreshReq)
+	})
+	assert.NoError(t, err)
+	assert.NotEmpty(t, refreshResp.AccessToken)
+	assert.NotEmpty(t, refreshResp.RefreshToken)
+
+	// 🔹 Шаг 4: Выход (Logout)
+	fmt.Println("\n🔹 Logout")
+	logoutReq := &pb.LogoutRequest{RefreshToken: generateResp.RefreshToken}
+
+	_, err = runTestCase(t, "Logout", func() (*pb.LogoutResponse, error) {
+		return client.Logout(context.Background(), logoutReq)
+	})
+	assert.NoError(t, err)
+}
+
+func runTestCase[T any](t *testing.T, testName string, fn func() (T, error)) (T, error) {
+	fmt.Printf("🔄 Тестируем %s...\n", testName)
+	result, err := fn()
 	if err != nil {
-		log.Fatalf("Ошибка обновления токена: %v", err)
+		fmt.Printf("❌ Ошибка в %s: %v\n", testName, err)
+		t.Fatalf("❌ %s провален: %v", testName, err)
+	} else {
+		fmt.Printf("✅ %s прошел успешно!\n", testName)
 	}
-	fmt.Println("✅ Обновление access_token:", refreshResp)
+	return result, err
 }
