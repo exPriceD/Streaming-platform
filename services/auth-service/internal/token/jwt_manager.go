@@ -27,17 +27,18 @@ func NewJWTManager(JWTConfig config.JWTConfig) *JWTManager {
 	}
 }
 
-func (m *JWTManager) GenerateTokens(userID uuid.UUID) (string, string, error) {
+func (m *JWTManager) GenerateTokens(userID uuid.UUID) (string, string, int64, time.Time, error) {
+	accessExpiresAt := time.Now().Add(m.AccessTokenDuration)
 	accessClaims := UserClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(m.AccessTokenDuration)),
+			ExpiresAt: jwt.NewNumericDate(accessExpiresAt),
 			ID:        uuid.New().String(),
 		},
 		UserID: userID,
 	}
 	accessToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims).SignedString([]byte(m.secretKey))
 	if err != nil {
-		return "", "", err
+		return "", "", 0, time.Time{}, err
 	}
 
 	refreshClaims := UserClaims{
@@ -49,10 +50,12 @@ func (m *JWTManager) GenerateTokens(userID uuid.UUID) (string, string, error) {
 	}
 	refreshToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims).SignedString([]byte(m.secretKey))
 	if err != nil {
-		return "", "", err
+		return "", "", 0, time.Time{}, err
 	}
 
-	return accessToken, refreshToken, nil
+	expiresIn := int64(m.AccessTokenDuration.Seconds())
+
+	return accessToken, refreshToken, expiresIn, accessExpiresAt, nil
 }
 
 func (m *JWTManager) ValidateAccessToken(accessToken string) (*UserClaims, error) {
