@@ -5,6 +5,8 @@ import (
 	"errors"
 	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/service"
 	pb "github.com/exPriceD/Streaming-platform/services/auth-service/proto"
+	"github.com/google/uuid"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type AuthHandler struct {
@@ -16,60 +18,32 @@ func NewAuthHandler(authService *service.AuthService) *AuthHandler {
 	return &AuthHandler{authService: authService}
 }
 
-func (h *AuthHandler) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.RegisterResponse, error) {
-	user, accessToken, refreshToken, err := h.authService.Register(req.Username, req.Email, req.Password, req.ConsentToDataProcessing)
+func (h *AuthHandler) Authenticate(ctx context.Context, req *pb.AuthenticateRequest) (*pb.AuthenticateResponse, error) {
+	userID, err := uuid.Parse(req.UserId)
 	if err != nil {
-		return &pb.RegisterResponse{
+		return &pb.AuthenticateResponse{
 			Error: &pb.Error{
 				Code:    pb.ErrorCode_INVALID_ARGUMENT,
+				Message: "Invalid User ID",
+			},
+		}, err
+	}
+
+	accessToken, refreshToken, expiresIn, expiresAt, err := h.authService.Authenticate(userID)
+	if err != nil {
+		return &pb.AuthenticateResponse{
+			Error: &pb.Error{
+				Code:    pb.ErrorCode_INTERNAL_ERROR,
 				Message: err.Error(),
 			},
 		}, err
 	}
 
-	return &pb.RegisterResponse{
-		UserId:       user.ID.String(),
+	return &pb.AuthenticateResponse{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
-		ExpiresIn:    3600,
-	}, nil
-}
-
-func (h *AuthHandler) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResponse, error) {
-	var identifier string
-	var isEmail bool
-
-	switch v := req.LoginIdentifier.(type) {
-	case *pb.LoginRequest_Email:
-		identifier = v.Email
-		isEmail = true
-	case *pb.LoginRequest_Username:
-		identifier = v.Username
-		isEmail = false
-	default:
-		return &pb.LoginResponse{
-			Error: &pb.Error{
-				Code:    pb.ErrorCode_INVALID_ARGUMENT,
-				Message: "invalid login identifier",
-			},
-		}, nil
-	}
-
-	user, accessToken, refreshToken, err := h.authService.Authenticate(identifier, req.Password, isEmail)
-	if err != nil {
-		return &pb.LoginResponse{
-			Error: &pb.Error{
-				Code:    pb.ErrorCode_UNAUTHORIZED,
-				Message: err.Error(),
-			},
-		}, err
-	}
-
-	return &pb.LoginResponse{
-		UserId:       user.ID.String(),
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-		ExpiresIn:    3600,
+		ExpiresIn:    expiresIn,
+		ExpiresAt:    timestamppb.New(expiresAt),
 	}, nil
 }
 
@@ -89,7 +63,7 @@ func (h *AuthHandler) ValidateToken(ctx context.Context, req *pb.ValidateTokenRe
 }
 
 func (h *AuthHandler) RefreshToken(ctx context.Context, req *pb.RefreshTokenRequest) (*pb.RefreshTokenResponse, error) {
-	newAccessToken, newRefreshToken, err := h.authService.RefreshTokens(req.RefreshToken)
+	newAccessToken, newRefreshToken, expiresIn, expiresAt, err := h.authService.RefreshTokens(req.RefreshToken)
 	if err != nil {
 		return &pb.RefreshTokenResponse{
 			Error: mapErrorToProto(err),
@@ -99,7 +73,8 @@ func (h *AuthHandler) RefreshToken(ctx context.Context, req *pb.RefreshTokenRequ
 	return &pb.RefreshTokenResponse{
 		AccessToken:  newAccessToken,
 		RefreshToken: newRefreshToken,
-		ExpiresIn:    3600,
+		ExpiresIn:    expiresIn,
+		ExpiresAt:    timestamppb.New(expiresAt),
 	}, nil
 }
 
@@ -129,6 +104,11 @@ func mapErrorToProto(err error) *pb.Error {
 		return &pb.Error{
 			Code:    pb.ErrorCode_TOKEN_INVALID,
 			Message: "Invalid token",
+		}
+	case errors.Is(err, service.ErrRefreshTokenRevoked):
+		return &pb.Error{
+			Code:    pb.ErrorCode_REFRESH_TOKEN_REVOKED,
+			Message: "Refresh token has been revoked",
 		}
 	default:
 		return &pb.Error{
