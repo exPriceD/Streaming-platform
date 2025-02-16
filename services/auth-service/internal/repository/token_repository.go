@@ -3,10 +3,13 @@ package repository
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/entities"
 	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/models"
-	"time"
+	"log"
+)
+
+var (
+	ErrTokenNotFound = errors.New("refresh token not found")
 )
 
 type tokenRepository struct {
@@ -21,6 +24,7 @@ func (r *tokenRepository) SaveRefreshToken(token *entities.RefreshToken) error {
 	query := `
         INSERT INTO refresh_tokens (user_id, token, expires_at, revoked, created_at)
         VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (token) DO NOTHING
     `
 	_, err := r.db.Exec(query, token.UserID, token.Token, token.ExpiresAt, false, token.CreatedAt)
 	return err
@@ -39,19 +43,31 @@ func (r *tokenRepository) GetRefreshToken(tokenStr string) (*entities.RefreshTok
 		return nil, errors.New("the token was not found")
 	}
 
-	if token.Revoked || token.ExpiresAt.Before(time.Now()) {
-		return nil, errors.New("the token is invalid")
-	}
-
 	return &token, nil
 }
 
 func (r *tokenRepository) RevokeRefreshToken(tokenStr string) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+
 	query := `
         UPDATE refresh_tokens SET revoked = true WHERE token = $1
     `
-	_, err := r.db.Exec(query, tokenStr)
-	return err
+	result, err := tx.Exec(query, tokenStr)
+	if err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		_ = tx.Rollback()
+		return ErrTokenNotFound
+	}
+
+	return tx.Commit()
 }
 
 func (r *tokenRepository) DeleteExpiredRefreshTokens() error {
@@ -62,7 +78,7 @@ func (r *tokenRepository) DeleteExpiredRefreshTokens() error {
 	}
 
 	rowsAffected, _ := result.RowsAffected()
-	fmt.Printf("Удалены устаревшие refresh_tokens - %d шт.", rowsAffected)
+	log.Printf("Outdated refresh_token has been removed - %d pcs.", rowsAffected)
 	return nil
 }
 
