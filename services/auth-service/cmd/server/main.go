@@ -43,11 +43,10 @@ func main() {
 		}
 	}(database)
 
-	userRepo := repository.NewUserRepository(database)
 	tokenRepo := repository.NewTokenRepository(database)
 	jwtManager := token.NewJWTManager(cfg.JWT)
 
-	authService := service.NewAuthService(userRepo, tokenRepo, jwtManager)
+	authService := service.NewAuthService(tokenRepo, jwtManager)
 
 	log.Info("🔧 Repositories and services are initialized")
 

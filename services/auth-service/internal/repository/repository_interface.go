@@ -8,9 +8,3 @@ type TokenRepository interface {
 	RevokeRefreshToken(tokenStr string) error
 	DeleteExpiredRefreshTokens() error
 }
-
-type UserRepository interface {
-	CreateUser(user *entities.User) error
-	GetUserByEmail(email string) (*entities.User, error)
-	GetUserByUsername(username string) (*entities.User, error)
-}
