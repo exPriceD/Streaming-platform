@@ -11,19 +11,18 @@ import (
 )
 
 var (
-	ErrTokenExpired = errors.New("the token expired")
-	ErrTokenInvalid = errors.New("invalid token")
+	ErrTokenExpired        = errors.New("the token expired")
+	ErrTokenInvalid        = errors.New("invalid token")
+	ErrRefreshTokenRevoked = errors.New("refresh token has been revoked")
 )
 
 type AuthService struct {
-	userRepo   repository.UserRepository
 	tokenRepo  repository.TokenRepository
 	jwtManager *token.JWTManager
 }
 
-func NewAuthService(userRepo repository.UserRepository, tokenRepo repository.TokenRepository, jwtManager *token.JWTManager) *AuthService {
+func NewAuthService(tokenRepo repository.TokenRepository, jwtManager *token.JWTManager) *AuthService {
 	service := &AuthService{
-		userRepo:   userRepo,
 		tokenRepo:  tokenRepo,
 		jwtManager: jwtManager,
 	}
@@ -33,81 +32,45 @@ func NewAuthService(userRepo repository.UserRepository, tokenRepo repository.Tok
 	return service
 }
 
-func (s *AuthService) Register(username, email, password string, consent bool) (*entities.User, string, string, error) {
-	user, err := entities.NewUser(username, email, password, consent)
+func (s *AuthService) Authenticate(userID uuid.UUID) (string, string, int64, time.Time, error) {
+	accessToken, refreshToken, expiresIn, expiresAt, err := s.GenerateTokens(userID)
 	if err != nil {
-		return nil, "", "", err
+		return "", "", 0, time.Time{}, err
 	}
 
-	err = s.userRepo.CreateUser(user)
-	if err != nil {
-		return nil, "", "", err
-	}
-
-	accessToken, refreshToken, err := s.generateTokens(user.ID)
-	if err != nil {
-		return nil, "", "", err
-	}
-
-	return user, accessToken, refreshToken, err
+	return accessToken, refreshToken, expiresIn, expiresAt, nil
 }
 
-func (s *AuthService) Authenticate(identifier, password string, isEmail bool) (*entities.User, string, string, error) {
-	var user *entities.User
-	var err error
-
-	if isEmail {
-		user, err = s.userRepo.GetUserByEmail(identifier)
-	} else {
-		user, err = s.userRepo.GetUserByUsername(identifier)
-	}
-
-	if err != nil {
-		return nil, "", "", errors.New("the user was not found")
-	}
-
-	if !user.CheckPassword(password) {
-		return nil, "", "", errors.New("invalid password")
-	}
-
-	accessToken, refreshToken, err := s.generateTokens(user.ID)
-	if err != nil {
-		return nil, "", "", err
-	}
-
-	return user, accessToken, refreshToken, nil
-}
-
-func (s *AuthService) RefreshTokens(refreshTokenStr string) (string, string, error) {
+func (s *AuthService) RefreshTokens(refreshTokenStr string) (string, string, int64, time.Time, error) {
 	refreshToken, err := s.tokenRepo.GetRefreshToken(refreshTokenStr)
 	if err != nil {
-		return "", "", err
+		return "", "", 0, time.Time{}, err
 	}
 
 	if refreshToken.Revoked {
-		return "", "", errors.New("refresh token has been revoked")
+		return "", "", 0, time.Time{}, ErrRefreshTokenRevoked
 	}
 
 	if time.Now().After(refreshToken.ExpiresAt) {
-		return "", "", errors.New("refresh token expired")
+		return "", "", 0, time.Time{}, ErrTokenExpired
 	}
 
-	accessToken, newRefreshToken, err := s.generateTokens(refreshToken.UserID)
+	accessToken, newRefreshToken, expiresIn, expiresAt, err := s.GenerateTokens(refreshToken.UserID)
 	if err != nil {
-		return "", "", err
+		return "", "", 0, time.Time{}, err
 	}
 
 	err = s.tokenRepo.RevokeRefreshToken(refreshTokenStr)
 	if err != nil {
-		return "", "", errors.New("RevokeRefreshToken error")
+		return "", "", 0, time.Time{}, err
 	}
-	return accessToken, newRefreshToken, nil
+	return accessToken, newRefreshToken, expiresIn, expiresAt, nil
 }
 
-func (s *AuthService) generateTokens(userID uuid.UUID) (string, string, error) {
-	accessToken, refreshToken, err := s.jwtManager.GenerateTokens(userID)
+func (s *AuthService) GenerateTokens(userID uuid.UUID) (string, string, int64, time.Time, error) {
+	accessToken, refreshToken, expiresIn, expiresAt, err := s.jwtManager.GenerateTokens(userID)
 	if err != nil {
-		return "", "", err
+		return "", "", 0, time.Time{}, err
 	}
 
 	refreshTokenEntity := &entities.RefreshToken{
@@ -119,10 +82,10 @@ func (s *AuthService) generateTokens(userID uuid.UUID) (string, string, error) {
 	}
 
 	if err := s.tokenRepo.SaveRefreshToken(refreshTokenEntity); err != nil {
-		return "", "", err
+		return "", "", 0, time.Time{}, err
 	}
 
-	return accessToken, refreshToken, nil
+	return accessToken, refreshToken, expiresIn, expiresAt, nil
 }
 
 func (s *AuthService) ValidateAccessToken(accessToken string) (uuid.UUID, error) {
