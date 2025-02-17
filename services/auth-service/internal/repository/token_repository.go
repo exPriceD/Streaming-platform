@@ -45,7 +45,7 @@ func (r *tokenRepository) GetRefreshToken(tokenStr string) (*entity.RefreshToken
         FROM refresh_tokens
         WHERE token = $1
     `
-	var token entity.RefreshToken
+	var token model.RefreshToken
 	err := r.db.QueryRow(query, tokenStr).Scan(&token.ID, &token.UserID, &token.Token, &token.ExpiresAt, &token.Revoked, &token.CreatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		r.log.Warn("Refresh token not found", slog.String("token", tokenStr))
@@ -58,7 +58,7 @@ func (r *tokenRepository) GetRefreshToken(tokenStr string) (*entity.RefreshToken
 	}
 
 	r.log.Info("Refresh token retrieved", slog.String("user_id", token.UserID.String()))
-	return &token, nil
+	return mapTokenModelToEntity(&token), nil
 }
 
 func (r *tokenRepository) RevokeRefreshToken(tokenStr string) error {
@@ -105,7 +105,7 @@ func (r *tokenRepository) DeleteExpiredRefreshTokens() error {
 	return nil
 }
 
-func mapTokenModelToEntity(tokenModel *model.RefreshTokenModel) *entity.RefreshToken {
+func mapTokenModelToEntity(tokenModel *model.RefreshToken) *entity.RefreshToken {
 	return &entity.RefreshToken{
 		ID:        tokenModel.ID,
 		UserID:    tokenModel.UserID,
