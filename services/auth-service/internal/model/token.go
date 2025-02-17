@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-type RefreshTokenModel struct {
+type RefreshToken struct {
 	ID        int       `db:"id"`
 	UserID    uuid.UUID `db:"user_id"`
 	Token     string    `db:"token"`
