@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/entity"
-	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/models"
+	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/model"
 	"log/slog"
 )
 
@@ -105,7 +105,7 @@ func (r *tokenRepository) DeleteExpiredRefreshTokens() error {
 	return nil
 }
 
-func mapTokenModelToEntity(tokenModel *models.RefreshTokenModel) *entity.RefreshToken {
+func mapTokenModelToEntity(tokenModel *model.RefreshTokenModel) *entity.RefreshToken {
 	return &entity.RefreshToken{
 		ID:        tokenModel.ID,
 		UserID:    tokenModel.UserID,
