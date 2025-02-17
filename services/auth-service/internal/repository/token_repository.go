@@ -5,7 +5,7 @@ import (
 	"errors"
 	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/entity"
 	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/models"
-	"log"
+	"log/slog"
 )
 
 var (
@@ -13,11 +13,15 @@ var (
 )
 
 type tokenRepository struct {
-	db *sql.DB
+	db  *sql.DB
+	log *slog.Logger
 }
 
-func NewTokenRepository(db *sql.DB) TokenRepository {
-	return &tokenRepository{db: db}
+func NewTokenRepository(db *sql.DB, log *slog.Logger) TokenRepository {
+	return &tokenRepository{
+		db:  db,
+		log: log,
+	}
 }
 
 func (r *tokenRepository) SaveRefreshToken(token *entity.RefreshToken) error {
@@ -27,6 +31,11 @@ func (r *tokenRepository) SaveRefreshToken(token *entity.RefreshToken) error {
 		ON CONFLICT (token) DO NOTHING
     `
 	_, err := r.db.Exec(query, token.UserID, token.Token, token.ExpiresAt, false, token.CreatedAt)
+	if err != nil {
+		r.log.Error("Failed to save refresh token", slog.String("error", err.Error()), slog.String("user_id", token.UserID.String()))
+	}
+
+	r.log.Info("Refresh token is saved", slog.String("user_id", token.UserID.String()))
 	return err
 }
 
@@ -38,17 +47,24 @@ func (r *tokenRepository) GetRefreshToken(tokenStr string) (*entity.RefreshToken
     `
 	var token entity.RefreshToken
 	err := r.db.QueryRow(query, tokenStr).Scan(&token.ID, &token.UserID, &token.Token, &token.ExpiresAt, &token.Revoked, &token.CreatedAt)
-
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, errors.New("the token was not found")
+		r.log.Warn("Refresh token not found", slog.String("token", tokenStr))
+		return nil, ErrTokenNotFound
 	}
 
+	if err != nil {
+		r.log.Error("Failed to get refresh token", slog.String("token", tokenStr), slog.String("error", err.Error()))
+		return nil, err
+	}
+
+	r.log.Info("Refresh token retrieved", slog.String("user_id", token.UserID.String()))
 	return &token, nil
 }
 
 func (r *tokenRepository) RevokeRefreshToken(tokenStr string) error {
 	tx, err := r.db.Begin()
 	if err != nil {
+		r.log.Error("Failed to begin transaction", slog.String("error", err.Error()))
 		return err
 	}
 
@@ -57,16 +73,18 @@ func (r *tokenRepository) RevokeRefreshToken(tokenStr string) error {
     `
 	result, err := tx.Exec(query, tokenStr)
 	if err != nil {
-		_ = tx.Rollback()
+		r.log.Error("Failed to revoke refresh token", slog.String("token", tokenStr), slog.String("error", err.Error()))
 		return err
 	}
 
 	rowsAffected, _ := result.RowsAffected()
 	if rowsAffected == 0 {
 		_ = tx.Rollback()
+		r.log.Warn("Attempted to revoke non-existing refresh token", slog.String("token", tokenStr))
 		return ErrTokenNotFound
 	}
 
+	r.log.Info("Refresh token revoked", slog.String("token", tokenStr))
 	return tx.Commit()
 }
 
@@ -74,11 +92,16 @@ func (r *tokenRepository) DeleteExpiredRefreshTokens() error {
 	query := `DELETE FROM refresh_tokens WHERE expires_at < NOW()`
 	result, err := r.db.Exec(query)
 	if err != nil {
+		r.log.Error("Failed to delete expired refresh tokens", slog.String("error", err.Error()))
 		return err
 	}
 
 	rowsAffected, _ := result.RowsAffected()
-	log.Printf("Outdated refresh_token has been removed - %d pcs.", rowsAffected)
+	if rowsAffected > 0 {
+		r.log.Info("Deleted expired refresh tokens", slog.Int64("count", rowsAffected))
+	} else {
+		r.log.Warn("No expired refresh tokens found for deletion")
+	}
 	return nil
 }
 

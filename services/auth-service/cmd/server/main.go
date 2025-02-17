@@ -43,10 +43,10 @@ func main() {
 		}
 	}(database)
 
-	tokenRepo := repository.NewTokenRepository(database)
-	jwtManager := token.NewJWTManager(cfg.JWT)
+	tokenRepo := repository.NewTokenRepository(database, log)
+	jwtManager := token.NewJWTManager(cfg.JWT, log)
 
-	authService := service.NewAuthService(tokenRepo, jwtManager)
+	authService := service.NewAuthService(tokenRepo, jwtManager, log)
 
 	log.Info("🔧 Repositories and services are initialized")
 
@@ -57,7 +57,7 @@ func main() {
 	}
 
 	grpcServer := grpc.NewServer()
-	pb.RegisterAuthServiceServer(grpcServer, handler.NewAuthHandler(authService))
+	pb.RegisterAuthServiceServer(grpcServer, handler.NewAuthHandler(authService, log))
 
 	log.Info("🚀 Auth-service is running", slog.String("network", network), slog.String("address", addr))
 	if err := grpcServer.Serve(lis); err != nil {
