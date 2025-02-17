@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package auth.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/exPriceD/Streaming-platform/services/auth-service/proto/authpb";
+
+// Сервис аутентификации, предоставляющий регистрацию, логин и валидацию токенов.
+service AuthService {
+  rpc Authenticate(AuthenticateRequest) returns (AuthenticateResponse);       // Создает нового пользователя
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse); // Проверяет корректность access_token
+  rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse); // Обновление access_token
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
+}
+
+// Перечисление возможных кодов ошибок.
+enum ErrorCode {
+  INVALID_ARGUMENT = 0;   // Неверные входные данные
+  TOKEN_EXPIRED = 1;      // Access/refresh token истек
+  TOKEN_INVALID = 2;      // Неверный токен
+  REFRESH_TOKEN_REVOKED = 3; // Refresh token был отозван
+  INTERNAL_ERROR = 4;     // Внутренняя ошибка сервера
+}
+
+// Структура для возврата ошибок.
+message Error {
+  ErrorCode code = 1;           // Код ошибки
+  string message = 2;           // Описание ошибки
+}
+
+// Данные для генерации токенов.
+message AuthenticateRequest {
+  string userId = 1;          // Идентификатор пользователя (UUID)
+}
+
+// Ответ на запрос генерации токенов.
+message AuthenticateResponse {
+  string accessToken = 1;  // JWT-токен доступа
+  string refreshToken = 2; // Refresh-токен для обновления access_token
+  int64 expiresIn = 3;     // Время жизни access_token в секундах
+  google.protobuf.Timestamp expiresAt = 4; // Время истечения access_token
+  Error error = 5;          // Ошибка, если регистрация не удалась
+}
+
+// Запрос на валидацию access_token.
+message ValidateTokenRequest {
+  string accessToken = 1;  // Токен для проверки
+}
+
+// Ответ на запрос валидации токена.
+message ValidateTokenResponse {
+  bool valid = 1;           // Результат проверки: true, если токен валиден
+  string userId = 2;       // Идентификатор пользователя, извлечённый из токена (если валиден)
+  Error error = 3;          // Ошибка, если токен недействителен
+}
+
+// Запрос для обновления access_token
+message RefreshTokenRequest {
+  string refreshToken = 1; // Текущий refresh_token
+}
+
+// Ответ при обновлении access_token
+message RefreshTokenResponse {
+  string accessToken = 1;  // Новый access_token
+  string refreshToken = 2; // Новый refresh_token
+  int64 expiresIn = 3;     // Время жизни нового access_token в секундах
+  google.protobuf.Timestamp expiresAt = 4; // Время истечения access_token
+  Error error = 5;          // Ошибка, если refresh_token недействителен
+}
+
+message LogoutRequest {
+  string refreshToken = 1; // Refresh-токен, который хотим отозвать
+}
+
+message LogoutResponse {
+  bool success = 1;  // true, если выход выполнен успешно
+  Error error = 2;   // Ошибка, если что-то пошло не так
+}
