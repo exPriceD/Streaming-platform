@@ -3,6 +3,7 @@ package router
 import (
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/entity"
 	"github.com/labstack/echo/v4"
+	"net/http"
 )
 
 type UserService interface {
@@ -19,9 +20,39 @@ func NewHandler(userService UserService) *Handler {
 }
 
 func (h *Handler) RegisterUser(c echo.Context) error {
-	return nil
+	var req RegisterRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request payload"})
+	}
+
+	userID, accessToken, refreshToken, _, err := h.userService.RegisterUser(req.Username, req.Email, req.Password, req.ConfirmPassword, req.Consent)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"message":      "User registered successfully",
+		"userID":       userID,
+		"accessToken":  accessToken,
+		"refreshToken": refreshToken,
+	})
 }
 
 func (h *Handler) LoginUser(c echo.Context) error {
-	return nil
+	var req LoginRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request payload"})
+	}
+
+	userID, accessToken, refreshToken, err := h.userService.LoginUser(req.LoginIdentifier, req.Password)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"message":      "User logged in successfully",
+		"userID":       userID,
+		"accessToken":  accessToken,
+		"refreshToken": refreshToken,
+	})
 }
