@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package chat;
+
+option go_package = "github.com/exPriceD/Streaming-platform/proto";
+
+// Сообщение чата
+message ChatMessage {
+  string user_id = 1;  // ID пользователя
+  string stream_id = 2; // ID стрима
+  string content = 3;  // Текст сообщения
+  int64 timestamp = 4; // Временная метка
+}
+
+// Ответ на запрос чата
+message ChatResponse {
+  string status = 1; // Статус (например, "success" или "error")
+  string error_message = 2; // Сообщение об ошибке (если есть)
+}
+
+// Запрос истории сообщений
+message ChatHistoryRequest {
+  string stream_id = 1; // ID стрима
+  int32 limit = 2;      // Количество сообщений (по умолчанию 50)
+}
+
+// Ответ с историей сообщений
+message ChatHistoryResponse {
+  repeated ChatMessage messages = 1;
+}
+
+// Стрим сообщений в реальном времени
+message StreamMessageRequest {
+  string stream_id = 1; // ID стрима
+}
+
+// gRPC-сервис для работы с чатом
+service ChatService {
+  // Отправка сообщения
+  rpc SendMessage (ChatMessage) returns (ChatResponse);
+
+  // Получение истории сообщений
+  rpc GetChatHistory (ChatHistoryRequest) returns (ChatHistoryResponse);
+
+  // Стриминг новых сообщений
+  rpc StreamMessages (StreamMessageRequest) returns (stream ChatMessage);
+}
