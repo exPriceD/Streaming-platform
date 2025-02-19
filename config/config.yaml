@@ -25,3 +25,15 @@ streaming_service:
   server:
     host: 0.0.0.0
     port: 8080
+
+chat_service:
+  db:
+    host: localhost
+    port: 5432
+    user: chat_user
+    password: chat_password
+    name: chat_db
+    ssl_mode: disable
+  server:
+    host: 0.0.0.0
+    port: 50052
