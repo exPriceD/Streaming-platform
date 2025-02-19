@@ -7,8 +7,11 @@ import (
 )
 
 type UserService interface {
-	RegisterUser(username, email, password, confirmPassword string, consent bool) (string, *string, *string, *entity.User, error)
-	LoginUser(loginIdentifier, password string) (string, *string, *string, error)
+	RegisterUser(username, email, password, confirmPassword string, consent bool) (string, string, string, *entity.User, error)
+	LoginUser(loginIdentifier, password string) (string, string, string, error)
+	ValidateToken(accessToken string) (bool, error)
+	RefreshToken(refreshToken string) (string, string, error)
+	Logout(refreshToken string) (bool, error)
 }
 
 type Handler struct {
@@ -22,37 +25,111 @@ func NewHandler(userService UserService) *Handler {
 func (h *Handler) RegisterUser(c echo.Context) error {
 	var req RegisterRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request payload"})
+		return c.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid request payload"})
 	}
 
-	userID, accessToken, refreshToken, _, err := h.userService.RegisterUser(req.Username, req.Email, req.Password, req.ConfirmPassword, req.Consent)
+	userId, accessToken, refreshToken, _, err := h.userService.RegisterUser(req.Username, req.Email, req.Password, req.ConfirmPassword, req.Consent)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}
 
-	return c.JSON(http.StatusOK, map[string]interface{}{
-		"message":      "User registered successfully",
-		"userID":       userID,
-		"accessToken":  accessToken,
-		"refreshToken": refreshToken,
+	c.SetCookie(&http.Cookie{
+		Name:     "refreshToken",
+		Value:    refreshToken,
+		HttpOnly: true,
+		// Должно быть включено при использовании HTTPS
+		// Secure:   false,
+		// SameSite: http.SameSiteStrictMode,
+	})
+
+	return c.JSON(http.StatusOK, echo.Map{
+		"message":     "User registered successfully",
+		"userID":      userId,
+		"accessToken": accessToken,
 	})
 }
 
 func (h *Handler) LoginUser(c echo.Context) error {
 	var req LoginRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request payload"})
+		return c.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid request payload"})
 	}
 
-	userID, accessToken, refreshToken, err := h.userService.LoginUser(req.LoginIdentifier, req.Password)
+	userId, accessToken, refreshToken, err := h.userService.LoginUser(req.LoginIdentifier, req.Password)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}
 
-	return c.JSON(http.StatusOK, map[string]interface{}{
-		"message":      "User logged in successfully",
-		"userID":       userID,
-		"accessToken":  accessToken,
-		"refreshToken": refreshToken,
+	c.SetCookie(&http.Cookie{
+		Name:     "refreshToken",
+		Value:    refreshToken,
+		HttpOnly: true,
+		// Должно быть включено при использовании HTTPS
+		// Secure:   false,
+		// SameSite: http.SameSiteStrictMode,
 	})
+
+	return c.JSON(http.StatusOK, echo.Map{
+		"message":     "User logged in successfully",
+		"userId":      userId,
+		"accessToken": accessToken,
+	})
+}
+
+func (h *Handler) LogoutUser(c echo.Context) error {
+	refreshToken, err := c.Cookie("refreshToken")
+	if err != nil {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "No refresh token found"})
+	}
+	ok, err := h.userService.Logout(refreshToken.Value)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+	}
+	if !ok {
+		return c.JSON(http.StatusInternalServerError, echo.Map{"error": "Logout failed"})
+	}
+
+	c.SetCookie(&http.Cookie{
+		Name:     "refreshToken",
+		Value:    "",
+		HttpOnly: true,
+		// Должно быть включено при использовании HTTPS
+		// Secure:   false,
+		// SameSite: http.SameSiteStrictMode,
+		MaxAge: -1, // Удаляем cookie
+	})
+
+	return c.JSON(http.StatusOK, echo.Map{"message": "User logged out successfully"})
+}
+
+func (h *Handler) GetUserData(c echo.Context) error {
+	return nil
+}
+
+func (h *Handler) ChangePassword(c echo.Context) error {
+	return nil
+}
+
+func (h *Handler) ForgotPassword(c echo.Context) error {
+	return nil
+}
+
+func (h *Handler) GetCurrentUser(c echo.Context) error {
+	return nil
+}
+
+func (h *Handler) UpdateCurrentUser(c echo.Context) error {
+	return nil
+}
+
+func (h *Handler) GetUserByID(c echo.Context) error {
+	return nil
+}
+
+func (h *Handler) UpdateUser(c echo.Context) error {
+	return nil
+}
+
+func (h *Handler) DeleteUser(c echo.Context) error {
+	return nil
 }
