@@ -50,7 +50,7 @@ func main() {
 	handler := router.NewHandler(userService)
 	log.Info("🔧 Handlers are initialized")
 
-	r := router.NewRouter(handler, log)
+	r := router.NewRouter(handler, log, userService)
 
 	if err := r.Run(":8080"); err != nil {
 		log.Error("❌ Server error", slog.String("error", err.Error()))
