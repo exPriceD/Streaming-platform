@@ -109,6 +109,13 @@ func (s *UserService) RefreshToken(refreshToken string) (string, string, error) 
 	return refreshResp.AccessToken, refreshResp.RefreshToken, nil
 }
 
+func (s *UserService) Logout(refreshToken string) (bool, error) {
+	logoutResp, err := s.authClient.Logout(context.Background(), refreshToken)
+	if err != nil {
+		return false, err
+	}
+	return logoutResp.Success, err
+}
 func (s *UserService) GetUserByID(userID string) (*entity.User, error) {
 	return nil, nil
 }
