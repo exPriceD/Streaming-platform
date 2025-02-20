@@ -8,13 +8,13 @@ import (
 
 // ChatMessage представляет сообщение в чате стрима
 type ChatMessage struct {
-	ID        uuid.UUID // Уникальный ID сообщения
-	StreamID  uuid.UUID // Ссылка на streams.id
-	UserID    uuid.UUID // Ссылка на users.id
-	Username  string    // Дублирование из users.username
-	Content   string    // Текст сообщения
-	Timestamp time.Time // Время отправки
-	IsDeleted bool      // Флаг удаления
+	ID        uuid.UUID `json:"id"`         // Уникальный ID сообщения
+	StreamID  uuid.UUID `json:"stream_id"`  // Ссылка на streams.id
+	UserID    uuid.UUID `json:"user_id"`    // Ссылка на users.id
+	Username  string    `json:"username"`   // Дублирование из users.username
+	Content   string    `json:"content"`    // Текст сообщения
+	Timestamp time.Time `json:"timestamp"`  // Время отправки
+	IsDeleted bool      `json:"is_deleted"` // Флаг удаления
 }
 
 // NewChatMessage создает новое сообщение

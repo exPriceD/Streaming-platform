@@ -1,7 +1,9 @@
 package websocket
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"sync"
 	"time"
@@ -11,6 +13,8 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"github.com/redis/go-redis/v9"
+	"golang.org/x/time/rate"
 )
 
 var (
@@ -22,18 +26,22 @@ var (
 
 // ChatServer управляет подключениями пользователей
 type ChatServer struct {
-	clients   map[uuid.UUID]*websocket.Conn // Хранение соединений по ID пользователя
-	mu        sync.Mutex
-	broadcast chan *entity.ChatMessage
-	jwtSecret string
+	clients     map[uuid.UUID]*websocket.Conn // Хранение соединений по ID пользователя
+	mu          sync.Mutex
+	broadcast   chan *entity.ChatMessage
+	jwtSecret   string
+	redisClient *redis.Client
+	spamLimiter *rate.Limiter
 }
 
 // NewChatServer создает новый WebSocket-сервер
-func NewChatServer(jwtSecret string) *ChatServer {
+func NewChatServer(jwtSecret string, redisClient *redis.Client) *ChatServer {
 	return &ChatServer{
-		clients:   make(map[uuid.UUID]*websocket.Conn),
-		broadcast: make(chan *entity.ChatMessage),
-		jwtSecret: jwtSecret,
+		clients:     make(map[uuid.UUID]*websocket.Conn),
+		broadcast:   make(chan *entity.ChatMessage),
+		jwtSecret:   jwtSecret,
+		redisClient: redisClient,
+		spamLimiter: rate.NewLimiter(rate.Every(time.Minute), 20), // 20 сообщений в минуту
 	}
 }
 
@@ -133,6 +141,45 @@ func (s *ChatServer) processMessage(userID uuid.UUID, msg *entity.ChatMessage) e
 
 // isSpam проверяет, не отправляет ли пользователь слишком много сообщений
 func (s *ChatServer) isSpam(userID uuid.UUID) bool {
-	// Реализация защиты от спама
-	return false
+	// Проверка через Redis
+	key := fmt.Sprintf("spam:%s", userID)
+	count, err := s.redisClient.Incr(context.Background(), key).Result()
+	if err != nil {
+		log.Error("Redis error", "error", err)
+		return true
+	}
+
+	if count == 1 {
+		s.redisClient.Expire(context.Background(), key, time.Minute)
+	}
+
+	return count > 10
+}
+
+// SendMessage отправляет сообщение пользователю
+func (s *ChatServer) SendMessage(userID uuid.UUID, message []byte) error {
+	// Проверка лимита
+	if !s.spamLimiter.Allow() {
+		return errors.New("message rate limit exceeded")
+	}
+
+	// Отправка с таймаутом
+	// s.mu.RLock()
+	conn, ok := s.clients[userID]
+	// s.mu.RUnlock()
+
+	if !ok {
+		return errors.New("user not connected")
+	}
+
+	conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+	err := conn.WriteMessage(websocket.TextMessage, message)
+	if err != nil {
+		s.mu.Lock()
+		delete(s.clients, userID)
+		s.mu.Unlock()
+		return err
+	}
+
+	return nil
 }
