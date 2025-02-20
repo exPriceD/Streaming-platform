@@ -2,10 +2,10 @@ package main
 
 import (
 	"database/sql"
-	"github.com/exPriceD/Streaming-platform/config"
 	"github.com/exPriceD/Streaming-platform/pkg/db"
 	"github.com/exPriceD/Streaming-platform/pkg/logger"
 	cl "github.com/exPriceD/Streaming-platform/services/user-service/internal/clients"
+	"github.com/exPriceD/Streaming-platform/services/user-service/internal/config"
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/repository"
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/service"
 	router "github.com/exPriceD/Streaming-platform/services/user-service/internal/transport/http"
@@ -21,7 +21,7 @@ func main() {
 		log.Info("✅ Clients are initialized")
 	}
 
-	cfg, err := config.LoadAuthConfig()
+	cfg, err := config.LoadConfig("dev") // dev, prod, test
 	if err != nil {
 		log.Error("❌ Couldn't load the configuration", slog.String("error", err.Error()))
 	}
