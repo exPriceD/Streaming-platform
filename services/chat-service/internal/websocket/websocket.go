@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -137,6 +138,23 @@ func (s *ChatServer) processMessage(userID uuid.UUID, msg *entity.ChatMessage) e
 	}
 
 	return nil
+}
+
+// StartBroadcast запускает рассылку сообщений
+func (s *ChatServer) StartBroadcast(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case msg := <-s.broadcast:
+			data, _ := json.Marshal(msg)
+			s.mu.Lock()
+			for client := range s.clients {
+				client.WriteMessage(websocket.TextMessage, data)
+			}
+			s.mu.Unlock()
+		}
+	}
 }
 
 // isSpam проверяет, не отправляет ли пользователь слишком много сообщений
