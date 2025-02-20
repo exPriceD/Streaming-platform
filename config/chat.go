@@ -6,9 +6,16 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type WebSocketConfig struct {
+	JWTSecret    string `yaml:"jwt_secret"`
+	RateLimit    int    `yaml:"rate_limit"`
+	WriteTimeout int    `yaml:"write_timeout"`
+}
+
 type ChatServiceConfig struct {
-	DB     DBConfig     `yaml:"db"`
-	Server ServerConfig `yaml:"server"`
+	DB        DBConfig        `yaml:"db"`
+	Server    ServerConfig    `yaml:"server"`
+	WebSocket WebSocketConfig `yaml:"websocket"`
 }
 
 func LoadChatConfig() (*ChatServiceConfig, error) {
