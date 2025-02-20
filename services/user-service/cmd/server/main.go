@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"github.com/exPriceD/Streaming-platform/pkg/db"
 	"github.com/exPriceD/Streaming-platform/pkg/logger"
 	cl "github.com/exPriceD/Streaming-platform/services/user-service/internal/clients"
@@ -14,12 +15,6 @@ import (
 
 func main() {
 	log := logger.InitLogger("user-service")
-	clients, err := cl.NewClients("localhost:50051")
-	if err != nil {
-		log.Error("❌ Clients initialization error", slog.String("error", err.Error()))
-	} else {
-		log.Info("✅ Clients are initialized")
-	}
 
 	cfg, err := config.LoadConfig("dev") // dev, prod, test
 	if err != nil {
@@ -27,7 +22,15 @@ func main() {
 	}
 	log.Info("✅ Configuration loaded successfully")
 
-	database, err := db.NewPostgresConnection(cfg.DB)
+	authClientAddr := fmt.Sprintf("%s:%d", cfg.Services.AuthService.Host, cfg.Services.AuthService.Port)
+	clients, err := cl.NewClients(authClientAddr)
+	if err != nil {
+		log.Error("❌ Clients initialization error", slog.String("error", err.Error()))
+	} else {
+		log.Info("✅ Clients are initialized")
+	}
+
+	database, err := db.NewPostgresConnection(cfg.DBConfig)
 	if err != nil {
 		log.Error("❌ Database connection error", slog.String("error", err.Error()))
 		return
@@ -52,7 +55,8 @@ func main() {
 
 	r := router.NewRouter(handler, log, userService)
 
-	if err := r.Run(":8080"); err != nil {
+	httpServerAddr := fmt.Sprintf("%s:%d", cfg.Services.AuthService.Host, cfg.Services.AuthService.Port)
+	if err := r.Run(httpServerAddr); err != nil {
 		log.Error("❌ Server error", slog.String("error", err.Error()))
 	}
 }
