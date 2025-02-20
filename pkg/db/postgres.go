@@ -3,7 +3,6 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"github.com/exPriceD/Streaming-platform/config"
 	_ "github.com/lib/pq"
 	"log"
 	"time"
@@ -18,7 +17,16 @@ var (
 	connTimeout           = 5 * time.Second
 )
 
-func NewPostgresConnection(dbConfig config.DBConfig) (*sql.DB, error) {
+type DBConfig struct {
+	Host     string
+	Port     int
+	User     string
+	Password string
+	Name     string
+	SSLMode  string
+}
+
+func NewPostgresConnection(dbConfig DBConfig) (*sql.DB, error) {
 	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s connect_timeout=%d",
 		dbConfig.Host, dbConfig.Port, dbConfig.User, dbConfig.Password, dbConfig.Name, dbConfig.SSLMode, int(connTimeout.Seconds()),
 	)
