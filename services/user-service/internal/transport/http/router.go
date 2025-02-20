@@ -3,6 +3,7 @@ package router
 import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"io"
 	"log"
 	"os"
 )
@@ -15,9 +16,11 @@ type Router struct {
 func NewRouter(handler *Handler) *Router {
 	e := echo.New()
 
+	mw := io.MultiWriter(os.Stdout, setLogsFile())
+
 	e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
 		Format: `{"time":"${time_rfc3339_nano}", "method":"${method}","uri":"${uri}", "status":${status},"error":"${error}"}` + "\n",
-		Output: setLogsFile(),
+		Output: mw,
 	}))
 
 	e.Use(middleware.Recover())
