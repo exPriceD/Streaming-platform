@@ -27,7 +27,7 @@ var (
 // ChatServer управляет подключениями пользователей
 type ChatServer struct {
 	clients     map[uuid.UUID]*websocket.Conn // Хранение соединений по ID пользователя
-	mu          sync.Mutex
+	mu          sync.RWMutex
 	broadcast   chan *entity.ChatMessage
 	jwtSecret   string
 	redisClient *redis.Client
@@ -164,9 +164,9 @@ func (s *ChatServer) SendMessage(userID uuid.UUID, message []byte) error {
 	}
 
 	// Отправка с таймаутом
-	// s.mu.RLock()
+	s.mu.RLock()
 	conn, ok := s.clients[userID]
-	// s.mu.RUnlock()
+	s.mu.RUnlock()
 
 	if !ok {
 		return errors.New("user not connected")
