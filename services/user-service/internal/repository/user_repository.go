@@ -46,17 +46,17 @@ func (r *UserRepository) GetUserByEmail(email string) (*entity.User, error) {
         WHERE email = $1
     `
 
-	var userModel model.User
+	var user model.User
 	err := r.db.QueryRow(query, email).
-		Scan(&userModel.ID, &userModel.Email, &userModel.PasswordHash, &userModel.ConsentToDataProcessing, &userModel.CreatedAt, &userModel.UpdatedAt)
+		Scan(&user.ID, &user.Email, &user.PasswordHash, &user.ConsentToDataProcessing, &user.CreatedAt, &user.UpdatedAt)
 
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, errors.New("the user was not found")
 	}
 
-	user := mapModelToEntity(&userModel)
+	mappedUser := mapModelToEntity(&user)
 
-	return user, err
+	return mappedUser, err
 }
 
 func (r *UserRepository) GetUserByUsername(username string) (*entity.User, error) {
