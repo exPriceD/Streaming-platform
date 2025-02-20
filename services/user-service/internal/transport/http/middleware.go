@@ -14,7 +14,7 @@ func (h *AuthMiddleware) UserIdentity(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		accessToken := c.Request().Header.Get("Authorization")
 		if accessToken == "" {
-			return c.JSON(http.StatusUnauthorized, echo.Map{"error": "Unauthorized. Access token is required"})
+			return c.JSON(http.StatusUnauthorized, echo.Map{"error": "Access token is required"})
 		}
 
 		// Добавить проверку токена в кэше
@@ -47,9 +47,8 @@ func (h *AuthMiddleware) UserIdentity(next echo.HandlerFunc) echo.HandlerFunc {
 			// SameSite: http.SameSiteStrictMode,
 		})
 
-		return c.JSON(http.StatusOK, echo.Map{
-			"message":     "Token refreshed",
-			"accessToken": newAccessToken,
-		})
+		c.Response().Header().Set("Authorization", "Bearer "+newAccessToken)
+
+		return next(c)
 	}
 }
