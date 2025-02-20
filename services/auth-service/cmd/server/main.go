@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"github.com/exPriceD/Streaming-platform/pkg/db"
 	logging "github.com/exPriceD/Streaming-platform/pkg/logger"
+	"github.com/exPriceD/Streaming-platform/pkg/proto/v1/auth"
 	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/config"
-	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/handler"
 	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/repository"
 	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/service"
 	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/token"
-	pb "github.com/exPriceD/Streaming-platform/services/auth-service/proto"
+	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/transport/grpc"
 	"google.golang.org/grpc"
 	"log/slog"
 	"net"
@@ -57,7 +57,7 @@ func main() {
 	}
 
 	grpcServer := grpc.NewServer()
-	pb.RegisterAuthServiceServer(grpcServer, handler.NewAuthHandler(authService, logger))
+	auth.RegisterAuthServiceServer(grpcServer, handler.NewAuthHandler(authService, logger))
 
 	logger.Info("🚀 Auth-service is running", slog.String("network", network), slog.String("address", addr))
 	if err := grpcServer.Serve(lis); err != nil {
