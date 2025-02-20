@@ -1,26 +1,18 @@
 package router
 
 import (
-	"github.com/exPriceD/Streaming-platform/services/user-service/internal/service"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"log"
-	"log/slog"
 	"os"
 )
 
 type Router struct {
-	e                *echo.Echo
-	handler          *Handler
-	log              *slog.Logger
-	customMiddleware *CustomMiddleware
+	e       *echo.Echo
+	handler *Handler
 }
 
-type CustomMiddleware struct {
-	authMiddleware *AuthMiddleware
-}
-
-func NewRouter(handler *Handler, log *slog.Logger, userService *service.UserService) *Router {
+func NewRouter(handler *Handler) *Router {
 	e := echo.New()
 
 	e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
@@ -30,16 +22,9 @@ func NewRouter(handler *Handler, log *slog.Logger, userService *service.UserServ
 
 	e.Use(middleware.Recover())
 
-	authMiddleware := AuthMiddleware{userService: userService}
-
-	customMiddleware := CustomMiddleware{
-		authMiddleware: &authMiddleware,
-	}
 	router := &Router{
-		e:                e,
-		handler:          handler,
-		log:              log,
-		customMiddleware: &customMiddleware,
+		e:       e,
+		handler: handler,
 	}
 
 	router.registerRoutes()
@@ -61,7 +46,7 @@ func (r *Router) registerRoutes() {
 	r.e.POST("/logout", r.handler.LogoutUser)
 	r.e.POST("/forgot-password", r.handler.ForgotPassword) // Запрос на восстановление пароля
 
-	v1 := r.e.Group("/api/v1", r.customMiddleware.authMiddleware.UserIdentity)
+	v1 := r.e.Group("/api/v1", r.handler.GetAuthMiddleware())
 	{
 		v1.GET("/users/me", r.handler.GetCurrentUser)            // Получение информации о текущем пользователе
 		v1.PUT("/users/me", r.handler.UpdateCurrentUser)         // Обновление данных профиля текущего пользователя
