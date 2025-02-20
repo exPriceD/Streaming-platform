@@ -1,41 +1,50 @@
 package router
 
 import (
-	"github.com/exPriceD/Streaming-platform/services/user-service/internal/service"
 	"github.com/labstack/echo/v4"
 	"net/http"
+	"strings"
 )
 
 type AuthMiddleware struct {
-	userService *service.UserService
+	userService UserService
 }
 
 func (h *AuthMiddleware) UserIdentity(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		accessToken := c.Request().Header.Get("Authorization")
-		if accessToken == "" {
-			return c.JSON(http.StatusUnauthorized, echo.Map{"error": "Access token is required"})
+		authHeader := c.Request().Header.Get("Authorization")
+		if authHeader == "" {
+			return c.JSON(http.StatusBadRequest, echo.Map{"error": "Authorization header is required"})
 		}
 
-		// Добавить проверку токена в кэше
+		const bearerPrefix = "Bearer "
+		if !strings.HasPrefix(authHeader, bearerPrefix) {
+			return c.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid Authorization header format"})
+		}
+		accessToken := strings.TrimPrefix(authHeader, bearerPrefix)
+
+		// TODO: Добавить проверку токена в кэше (например, Redis)
+		// if cached, err := h.checkTokenInCache(accessToken); cached {
+		//     return next(c)
+		// }
 
 		valid, err := h.userService.ValidateToken(accessToken)
 		if err != nil {
-			return c.JSON(http.StatusUnauthorized, echo.Map{"error": "Token validate failed"})
+			return c.JSON(http.StatusUnauthorized, echo.Map{"error": "Failed to validate token"})
 		}
 
 		if valid {
 			return next(c)
 		}
 
-		refreshToken, err := c.Cookie("refreshToken")
-		if err != nil || refreshToken == nil {
+		refreshCookie, err := c.Cookie("refreshToken")
+		if err != nil || refreshCookie == nil {
 			return c.JSON(http.StatusUnauthorized, echo.Map{"error": "Refresh token is required"})
 		}
 
-		newAccessToken, newRefreshToken, err := h.userService.RefreshToken(refreshToken.Value)
+		newAccessToken, newRefreshToken, err := h.userService.RefreshToken(refreshCookie.Value)
 		if err != nil {
-			return c.JSON(http.StatusUnauthorized, echo.Map{"error": "Token refresh failed"})
+			return c.JSON(http.StatusUnauthorized, echo.Map{"error": "Failed to refresh token"})
 		}
 
 		c.SetCookie(&http.Cookie{
@@ -47,8 +56,10 @@ func (h *AuthMiddleware) UserIdentity(next echo.HandlerFunc) echo.HandlerFunc {
 			// SameSite: http.SameSiteStrictMode,
 		})
 
-		c.Response().Header().Set("Authorization", "Bearer "+newAccessToken)
-
-		return next(c)
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error":        "Access token expired",
+			"accessToken":  newAccessToken,
+			"refreshToken": newRefreshToken,
+		})
 	}
 }
