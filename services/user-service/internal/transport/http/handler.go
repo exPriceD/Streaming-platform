@@ -25,7 +25,7 @@ func NewHandler(userService UserService, logger *slog.Logger) *Handler {
 }
 
 func (h *Handler) GetAuthMiddleware() echo.MiddlewareFunc {
-	return AuthMiddleware{userService: h.userService}.UserIdentity
+	return (&AuthMiddleware{userService: h.userService}).UserIdentity
 }
 
 func (h *Handler) RegisterUser(c echo.Context) error {
