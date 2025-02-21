@@ -41,3 +41,11 @@ chat_service:
     jwt_secret: super_secret_key
     rate_limit: 20 # сообщений в минуту
     write_timeout: 5 # секунд
+  mongo:
+    uri: "mongodb://localhost:27017"
+    database: "chat_db"
+  redis:
+    host: localhost
+    port: 6379
+    password: ""
+    db: 0
