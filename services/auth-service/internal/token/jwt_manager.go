@@ -2,7 +2,7 @@ package token
 
 import (
 	"errors"
-	"github.com/exPriceD/Streaming-platform/config"
+	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/config"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
 	"log/slog"
