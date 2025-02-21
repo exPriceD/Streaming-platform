@@ -52,9 +52,9 @@ func (h *Handler) RegisterUser(c echo.Context) error {
 
 	h.logger.Info("User registered successfully", slog.String("userId", userId), slog.String("email", req.Email))
 	return c.JSON(http.StatusOK, echo.Map{
-		"message":     "User registered successfully",
-		"userID":      userId,
-		"accessToken": accessToken,
+		"message":      "User registered successfully",
+		"user_id":      userId,
+		"access_token": accessToken,
 	})
 }
 
@@ -82,9 +82,9 @@ func (h *Handler) LoginUser(c echo.Context) error {
 
 	h.logger.Info("User logged in successfully", slog.String("userId", userId), slog.String("login", req.LoginIdentifier))
 	return c.JSON(http.StatusOK, echo.Map{
-		"message":     "User logged in successfully",
-		"userId":      userId,
-		"accessToken": accessToken,
+		"message":      "User logged in successfully",
+		"user_id":      userId,
+		"access_token": accessToken,
 	})
 }
 
