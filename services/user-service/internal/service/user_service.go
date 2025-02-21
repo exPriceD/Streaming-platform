@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	authProto "github.com/exPriceD/Streaming-platform/services/auth-service/proto"
+	authProto "github.com/exPriceD/Streaming-platform/pkg/proto/v1/auth"
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/clients"
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/entity"
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/utils"

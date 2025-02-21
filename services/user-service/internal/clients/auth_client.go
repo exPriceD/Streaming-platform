@@ -3,7 +3,7 @@ package clients
 import (
 	"context"
 	"errors"
-	authpb "github.com/exPriceD/Streaming-platform/services/auth-service/proto"
+	authpb "github.com/exPriceD/Streaming-platform/pkg/proto/v1/auth"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"log"
