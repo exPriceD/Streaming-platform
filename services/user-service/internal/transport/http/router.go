@@ -13,7 +13,7 @@ type Router struct {
 	handler *Handler
 }
 
-func NewRouter(handler *Handler, logger *slog.Logger, CORS *config.CORSConfig) *Router {
+func NewRouter(handler *Handler, logger *slog.Logger, CORS config.CORSConfig) *Router {
 	e := echo.New()
 
 	e.Use(middleware.NewLoggerMiddleware(middleware.LoggerMiddlewareConfig{
