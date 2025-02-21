@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"github.com/exPriceD/Streaming-platform/pkg/db"
 	logging "github.com/exPriceD/Streaming-platform/pkg/logger"
@@ -35,14 +34,19 @@ func main() {
 		logger.Error("❌ Database connection error", slog.String("error", err.Error()))
 		return
 	}
-	defer func(database *sql.DB) {
-		err := database.Close()
-		if err != nil {
+	defer func() {
+		if err := database.Close(); err != nil {
 			logger.Error("Couldn't close the database", slog.String("error", err.Error()))
 		} else {
 			logger.Info("✅ The database connection is closed")
 		}
-	}(database)
+
+		if err := clients.Auth.Close(); err != nil {
+			logger.Error("❌ Failed to close AuthClient connection", slog.String("error", err.Error()))
+		} else {
+			logger.Info("✅ AuthClient connection closed")
+		}
+	}()
 
 	userRepo := repository.NewUserRepository(database)
 	logger.Info("🔧 Repositories are initialized")
