@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package user.v1;
+
+option go_package = "github.com/exPriceD/Streaming-platform/pkg/proto/v1/user";
+
+// UserService определяет API для работы с пользователями
+service UserService {
+  // GetUser возвращает данные о пользователе по его ID
+  rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+}
+
+// Запрос для получения данных пользователя
+message GetUserRequest {
+  string user_id = 1; // ID пользователя
+}
+
+// Ответ с данными пользователя
+message GetUserResponse {
+  string user_id = 1;
+  string username = 2;
+  string email = 3;
+  string avatar_url = 4;
+}
