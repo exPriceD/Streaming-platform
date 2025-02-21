@@ -1,6 +1,7 @@
 package router
 
 import (
+	"github.com/exPriceD/Streaming-platform/services/user-service/internal/config"
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/transport/http/middleware"
 	"github.com/labstack/echo/v4"
 	echoMiddleware "github.com/labstack/echo/v4/middleware"
@@ -12,7 +13,7 @@ type Router struct {
 	handler *Handler
 }
 
-func NewRouter(handler *Handler, logger *slog.Logger) *Router {
+func NewRouter(handler *Handler, logger *slog.Logger, CORS *config.CORSConfig) *Router {
 	e := echo.New()
 
 	e.Use(middleware.NewLoggerMiddleware(middleware.LoggerMiddlewareConfig{
@@ -20,6 +21,14 @@ func NewRouter(handler *Handler, logger *slog.Logger) *Router {
 		ConsoleLevel: slog.LevelInfo,
 		FileLevel:    slog.LevelDebug,
 		LogFilePath:  "logs/requests.log",
+	}))
+
+	e.Use(echoMiddleware.CORSWithConfig(echoMiddleware.CORSConfig{
+		AllowOrigins:     CORS.AllowOrigins,
+		AllowMethods:     CORS.AllowMethods,
+		AllowHeaders:     CORS.AllowHeaders,
+		AllowCredentials: CORS.AllowCredentials,
+		MaxAge:           CORS.MaxAge,
 	}))
 
 	e.Use(echoMiddleware.Recover())

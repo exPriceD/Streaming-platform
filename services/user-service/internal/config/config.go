@@ -7,29 +7,38 @@ import (
 )
 
 type Config struct {
-	DBConfig db.DBConfig `mapstructure:"db"`
-	GRPC     GRPC        `mapstructure:"grpc"`
-	HTTP     HTTP        `mapstructure:"http"`
-	Services Services    `mapstructure:"services"`
+	DBConfig db.DBConfig    `mapstructure:"db"`
+	GRPC     GRPCConfig     `mapstructure:"grpc"`
+	HTTP     HTTPConfig     `mapstructure:"http"`
+	CORS     CORSConfig     `mapstructure:"cors"`
+	Services ServicesConfig `mapstructure:"services"`
 }
 
-type GRPC struct {
+type GRPCConfig struct {
 	Host string `mapstructure:"host"`
 	Port int    `mapstructure:"port"`
 }
 
-type HTTP struct {
+type HTTPConfig struct {
 	Host string `mapstructure:"host"`
 	Port int    `mapstructure:"port"`
 }
 
-type Service struct {
+type CORSConfig struct {
+	AllowOrigins     []string `mapstructure:"allow_origins"`
+	AllowMethods     []string `mapstructure:"allow_methods"`
+	AllowHeaders     []string `mapstructure:"allow_headers"`
+	AllowCredentials bool     `mapstructure:"allow_credentials"`
+	MaxAge           int      `mapstructure:"max_age"`
+}
+
+type ServiceConfig struct {
 	Host string `mapstructure:"host"`
 	Port int    `mapstructure:"port"`
 }
 
-type Services struct {
-	AuthService Service `mapstructure:"auth_service"`
+type ServicesConfig struct {
+	AuthService ServiceConfig `mapstructure:"auth_service"`
 }
 
 func LoadConfig(env string) (*Config, error) {

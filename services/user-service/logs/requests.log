@@ -3,3 +3,9 @@
 {"time":"2025-02-21T20:27:15.3238593+03:00","level":"INFO","msg":"Request processed","http":{"method":"POST","uri":"//login","status":200,"error":"code=404, message=Not Found","duration":0,"remote_ip":"127.0.0.1"}}
 {"time":"2025-02-21T20:30:52.5194452+03:00","level":"ERROR","msg":"Request processed","http":{"method":"POST","uri":"/login","status":500,"error":"пользователь не найден","duration":3219000,"remote_ip":"127.0.0.1"}}
 {"time":"2025-02-21T20:33:13.2567208+03:00","level":"INFO","msg":"User logged in successfully","http":{"method":"POST","uri":"/login","status":200,"error":"","duration":95016100,"remote_ip":"127.0.0.1"}}
+{"time":"2025-02-21T20:44:00.71462+03:00","level":"WARN","msg":"Request processed","http":{"method":"POST","uri":"/logout","status":400,"error":"","duration":0,"remote_ip":"127.0.0.1"}}
+{"time":"2025-02-21T20:44:04.1893057+03:00","level":"INFO","msg":"Request processed","http":{"method":"POST","uri":"/logout","status":200,"error":"","duration":55138000,"remote_ip":"127.0.0.1"}}
+{"time":"2025-02-21T20:44:17.225801+03:00","level":"WARN","msg":"Request processed","http":{"method":"POST","uri":"/logout","status":401,"error":"","duration":676700,"remote_ip":"127.0.0.1"}}
+{"time":"2025-02-21T20:44:21.094107+03:00","level":"WARN","msg":"Request processed","http":{"method":"POST","uri":"/logout","status":401,"error":"","duration":768100,"remote_ip":"127.0.0.1"}}
+{"time":"2025-02-21T20:44:42.9141164+03:00","level":"WARN","msg":"Request processed","http":{"method":"POST","uri":"/logout","status":400,"error":"","duration":0,"remote_ip":"127.0.0.1"}}
+{"time":"2025-02-21T22:06:23.3288022+03:00","level":"INFO","msg":"User logged in successfully","http":{"method":"POST","uri":"/login","status":200,"error":"","duration":95131000,"remote_ip":"127.0.0.1"}}
