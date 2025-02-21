@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"flag"
 	"fmt"
 	"github.com/exPriceD/Streaming-platform/pkg/db"
 	logging "github.com/exPriceD/Streaming-platform/pkg/logger"
@@ -23,7 +24,10 @@ var (
 func main() {
 	logger := logging.InitLogger("auth-service")
 
-	cfg, err := config.LoadConfig("dev") // dev, prod, test
+	configPath := flag.String("config", "dev", "path to config file or environment name (e.g., 'dev', 'prod', '/path/to/config.yaml')")
+	flag.Parse()
+
+	cfg, err := config.LoadConfig(*configPath) // dev, prod, test
 	if err != nil {
 		logger.Error("❌ Couldn't load the configuration", slog.String("error", err.Error()))
 	}

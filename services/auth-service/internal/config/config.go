@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/exPriceD/Streaming-platform/pkg/db"
 	"github.com/spf13/viper"
+	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -24,12 +26,19 @@ type JWTConfig struct {
 	RefreshTokenDuration time.Duration `mapstructure:"refresh_token_duration"`
 }
 
-func LoadConfig(env string) (*Config, error) {
+func LoadConfig(configInput string) (*Config, error) {
 	v := viper.New()
 
-	v.AddConfigPath("internal/config")
-	v.SetConfigName(fmt.Sprintf("config.%s", env))
-	v.SetConfigType("yaml")
+	if filepath.IsAbs(configInput) || (len(configInput) > 5 && configInput[len(configInput)-5:] == ".yaml") {
+		if _, err := os.Stat(configInput); os.IsNotExist(err) {
+			return nil, fmt.Errorf("config file does not exist: %s", configInput)
+		}
+		v.SetConfigFile(configInput)
+	} else {
+		v.AddConfigPath("internal/config")
+		v.SetConfigName(fmt.Sprintf("config.%s", configInput))
+		v.SetConfigType("yaml")
+	}
 
 	v.AutomaticEnv()
 
