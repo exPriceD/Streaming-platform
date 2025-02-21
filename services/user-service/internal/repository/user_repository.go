@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/entity"
@@ -93,6 +94,22 @@ func (r *UserRepository) UpdateUser(user *entity.User) (*entity.User, error) {
 		return nil, err
 	}
 	return user, nil
+}
+
+func (r *UserRepository) GetByID(ctx context.Context, userID string) (*entity.User, error) {
+	query := `SELECT id, username, email, avatar_url FROM users WHERE id = $1`
+	var user model.User
+	err := r.db.QueryRowContext(ctx, query, userID).Scan(&user.ID, &user.Username, &user.Email, &user.AvatarURL)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, errors.New("user not found")
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	mappedUser := mapModelToEntity(&user)
+
+	return mappedUser, nil
 }
 
 func mapModelToEntity(user *model.User) *entity.User {

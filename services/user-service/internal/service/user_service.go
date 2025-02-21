@@ -15,6 +15,7 @@ type UserRepository interface {
 	CreateUser(user *entity.User) error
 	GetUserByEmail(email string) (*entity.User, error)
 	GetUserByUsername(username string) (*entity.User, error)
+	GetByID(ctx context.Context, userID string) (*entity.User, error)
 }
 
 type UserService struct {
@@ -87,7 +88,7 @@ func (s *UserService) ValidateToken(accessToken string) (bool, error) {
 	}
 
 	if validateResp.Error != nil {
-		return false, fmt.Errorf("invalid token: %w", validateResp.Error)
+		return false, fmt.Errorf("invalid token: %v", validateResp.Error)
 	}
 
 	if validateResp.Valid {
@@ -103,7 +104,7 @@ func (s *UserService) RefreshToken(refreshToken string) (string, string, error) 
 	}
 
 	if refreshResp.Error != nil {
-		return "", "", fmt.Errorf("invalid refresh token: %w", refreshResp.Error)
+		return "", "", fmt.Errorf("invalid refresh token: %v", refreshResp.Error)
 	}
 	return refreshResp.AccessToken, refreshResp.RefreshToken, nil
 }
@@ -115,6 +116,16 @@ func (s *UserService) Logout(refreshToken string) (bool, error) {
 	}
 	return logoutResp.Success, err
 }
-func (s *UserService) GetUserByID(userID string) (*entity.User, error) {
-	return nil, nil
+
+func (s *UserService) GetUser(ctx context.Context, userID string) (*entity.User, error) {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	return &entity.User{
+		ID:        user.ID,
+		Username:  user.Username,
+		Email:     user.Email,
+		AvatarURL: user.AvatarURL,
+	}, nil
 }
