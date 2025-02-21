@@ -1,6 +1,7 @@
 package token
 
 import (
+	"context"
 	"errors"
 	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/config"
 	"github.com/golang-jwt/jwt/v4"
@@ -30,7 +31,14 @@ func NewJWTManager(JWTConfig config.JWTConfig, log *slog.Logger) *JWTManager {
 	}
 }
 
-func (m *JWTManager) GenerateTokens(userID uuid.UUID) (string, string, int64, time.Time, error) {
+func (m *JWTManager) GenerateTokens(ctx context.Context, userID uuid.UUID) (string, string, int64, time.Time, error) {
+	select {
+	case <-ctx.Done():
+		m.log.Warn("Token generation canceled", slog.String("user_id", userID.String()), slog.String("error", ctx.Err().Error()))
+		return "", "", 0, time.Time{}, ctx.Err()
+	default:
+	}
+
 	accessExpiresAt := time.Now().Add(m.AccessTokenDuration)
 	accessClaims := UserClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -43,6 +51,13 @@ func (m *JWTManager) GenerateTokens(userID uuid.UUID) (string, string, int64, ti
 	if err != nil {
 		m.log.Error("Failed to generate access token", slog.String("user_id", userID.String()), slog.String("error", err.Error()))
 		return "", "", 0, time.Time{}, err
+	}
+
+	select {
+	case <-ctx.Done():
+		m.log.Warn("Token generation canceled", slog.String("user_id", userID.String()), slog.String("error", ctx.Err().Error()))
+		return "", "", 0, time.Time{}, ctx.Err()
+	default:
 	}
 
 	refreshExpiresAt := time.Now().Add(m.RefreshTokenDuration)
@@ -70,7 +85,14 @@ func (m *JWTManager) GenerateTokens(userID uuid.UUID) (string, string, int64, ti
 	return accessToken, refreshToken, expiresIn, accessExpiresAt, nil
 }
 
-func (m *JWTManager) ValidateToken(tokenStr string) (*UserClaims, error) {
+func (m *JWTManager) ValidateToken(ctx context.Context, tokenStr string) (*UserClaims, error) {
+	select {
+	case <-ctx.Done():
+		m.log.Warn("Token validation canceled", slog.String("error", ctx.Err().Error()))
+		return nil, ctx.Err()
+	default:
+	}
+
 	token, err := jwt.ParseWithClaims(tokenStr, &UserClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(m.secretKey), nil
 	})
