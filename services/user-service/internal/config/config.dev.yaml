@@ -16,5 +16,5 @@ http:
 
 services:
   auth_service:
-    host: 0.0.0.0
+    host: localhost
     port: 50051
