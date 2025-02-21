@@ -36,7 +36,7 @@ func NewRouter(handler *Handler) *Router {
 }
 
 func setLogsFile() *os.File {
-	file, err := os.OpenFile("/logs/requests.log", os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
+	file, err := os.OpenFile("logs/requests.log", os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		log.Fatal(err)
 	}
