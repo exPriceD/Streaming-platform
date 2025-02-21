@@ -28,12 +28,14 @@ func NewStreamService(
 	ffmpegService *FFmpegService,
 	userProfileRepo repository.UserProfileRepositoryInterface,
 	rtmpServerURL string,
+	db *sql.DB,
 ) *StreamService {
 	return &StreamService{
 		streamRepo:      streamRepo,
 		ffmpegService:   ffmpegService,
 		userProfileRepo: userProfileRepo,
 		rtmpServerURL:   rtmpServerURL,
+		db:              db,
 	}
 }
 
@@ -139,4 +141,56 @@ func (s *StreamService) UpdateStreamStatus(streamID, status string) error {
 		return errors.New("не удалось обновить статус стрима")
 	}
 	return nil
+}
+
+// GenerateStreamKey создаёт и сохраняет новый stream-key для пользователя.
+func (s *StreamService) GenerateStreamKey(userID string) (string, error) {
+	// Генерация уникального stream-key
+	streamKey := uuid.New().String()
+
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		log.Printf("Некорректный userID: %v", err)
+		return "", errors.New("некорректный userID")
+	}
+	err = s.userProfileRepo.SaveStreamKey(uid, streamKey)
+	if err != nil {
+		log.Printf("Ошибка при сохранении stream-key: %v", err)
+		return "", errors.New("не удалось сохранить stream-key")
+	}
+
+	return streamKey, nil
+}
+
+// GetStreamKey получает stream-key пользователя.
+func (s *StreamService) GetStreamKey(userID string) (string, bool, error) {
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		log.Printf("Некорректный userID: %v", err)
+		return "", false, errors.New("некорректный userID")
+	}
+	streamKey, err := s.userProfileRepo.GetStreamKey(uid)
+	if err != nil {
+		log.Printf("Ошибка получения stream-key: %v", err)
+		return "", false, errors.New("ошибка получения stream-key")
+	}
+
+	if streamKey == "" {
+		return "", false, nil // stream-key не существует
+	}
+
+	return streamKey, true, nil
+}
+
+// RegenerateStreamKey пересоздаёт stream-key пользователя.
+func (s *StreamService) RegenerateStreamKey(userID string) (string, error) {
+	newStreamKey := uuid.New().String()
+
+	err := s.userProfileRepo.UpdateStreamKey(userID, newStreamKey)
+	if err != nil {
+		log.Printf("Ошибка при обновлении stream-key: %v", err)
+		return "", errors.New("не удалось обновить stream-key")
+	}
+
+	return newStreamKey, nil
 }

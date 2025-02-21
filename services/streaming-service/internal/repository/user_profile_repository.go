@@ -58,3 +58,25 @@ func (r *UserProfileRepository) UpdateLiveStatus(userID uuid.UUID, isLive bool) 
 	_, err := r.db.Exec(query, isLive, userID)
 	return err
 }
+
+// SaveStreamKey сохраняет stream_key для пользователя.
+func (r *UserProfileRepository) SaveStreamKey(userID string, streamKey string) error {
+	_, err := r.db.Exec("INSERT INTO user_profiles (user_id, stream_key) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET stream_key = $2", userID, streamKey)
+	return err
+}
+
+// GetStreamKey получает stream_key пользователя.
+func (r *UserProfileRepository) GetStreamKey(userID string) (string, error) {
+	var streamKey string
+	err := r.db.QueryRow("SELECT stream_key FROM user_profiles WHERE user_id = $1", userID).Scan(&streamKey)
+	if err == sql.ErrNoRows {
+		return "", nil
+	}
+	return streamKey, err
+}
+
+// UpdateStreamKey обновляет stream_key пользователя.
+func (r *UserProfileRepository) UpdateStreamKey(userID string, newStreamKey string) error {
+	_, err := r.db.Exec("UPDATE user_profiles SET stream_key = $1 WHERE user_id = $2", newStreamKey, userID)
+	return err
+}
