@@ -7,10 +7,14 @@ db:
   ssl_mode:
 
 grpc:
+  host:
   port:
 
 http:
+  host:
   port:
 
 services:
   auth_service:
+    host:
+    port:

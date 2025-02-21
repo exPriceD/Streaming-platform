@@ -7,12 +7,14 @@ db:
   ssl_mode: disable
 
 grpc:
+  host: 0.0.0.0
   port: 50052
 
 http:
+  host: localhost
   port: 8080
 
 services:
   auth_service:
-    host: localhost
+    host: 0.0.0.0
     port: 50051

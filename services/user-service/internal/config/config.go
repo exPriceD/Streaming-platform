@@ -14,11 +14,13 @@ type Config struct {
 }
 
 type GRPC struct {
-	Port int `mapstructure:"port"`
+	Host string `mapstructure:"host"`
+	Port int    `mapstructure:"port"`
 }
 
 type HTTP struct {
-	Port int `mapstructure:"port"`
+	Host string `mapstructure:"host"`
+	Port int    `mapstructure:"port"`
 }
 
 type Service struct {
