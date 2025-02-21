@@ -3,7 +3,8 @@ module github.com/exPriceD/Streaming-platform/services/user-service
 go 1.23.6
 
 require (
-	github.com/exPriceD/Streaming-platform v0.0.0-20250221124522-fec33deb8f1d
+	github.com/exPriceD/Streaming-platform v0.0.0-20250221203122-53ff59204afd
+	github.com/fatih/color v1.18.0
 	github.com/google/uuid v1.6.0
 	github.com/labstack/echo/v4 v4.13.3
 	github.com/lib/pq v1.10.9
@@ -13,7 +14,6 @@ require (
 )
 
 require (
-	github.com/fatih/color v1.18.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/labstack/gommon v0.4.2 // indirect
