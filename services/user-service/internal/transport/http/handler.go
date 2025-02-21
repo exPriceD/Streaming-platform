@@ -2,6 +2,7 @@ package router
 
 import (
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/entity"
+	"github.com/exPriceD/Streaming-platform/services/user-service/internal/transport/http/middleware"
 	"github.com/labstack/echo/v4"
 	"log/slog"
 	"net/http"
@@ -25,19 +26,21 @@ func NewHandler(userService UserService, logger *slog.Logger) *Handler {
 }
 
 func (h *Handler) GetAuthMiddleware() echo.MiddlewareFunc {
-	return (&AuthMiddleware{userService: h.userService}).UserIdentity
+	return (&middleware.AuthMiddleware{AuthService: h.userService}).UserIdentity
 }
 
 func (h *Handler) RegisterUser(c echo.Context) error {
 	var req RegisterRequest
 	if err := c.Bind(&req); err != nil {
 		h.logger.Error("Failed to bind request", slog.String("error", err.Error()))
+		c.Set("error_message", err.Error())
 		return c.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid request payload"})
 	}
 
 	userId, accessToken, refreshToken, _, err := h.userService.RegisterUser(req.Username, req.Email, req.Password, req.ConfirmPassword, req.Consent)
 	if err != nil {
 		h.logger.Error("Failed to register user", slog.String("error", err.Error()), slog.String("email", req.Email))
+		c.Set("error_message", err.Error())
 		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}
 
@@ -51,6 +54,7 @@ func (h *Handler) RegisterUser(c echo.Context) error {
 	})
 
 	h.logger.Info("User registered successfully", slog.String("userId", userId), slog.String("email", req.Email))
+	c.Set("log_message", "User registered successfully")
 	return c.JSON(http.StatusOK, echo.Map{
 		"message":      "User registered successfully",
 		"user_id":      userId,
@@ -62,12 +66,14 @@ func (h *Handler) LoginUser(c echo.Context) error {
 	var req LoginRequest
 	if err := c.Bind(&req); err != nil {
 		h.logger.Error("Failed to bind login request", slog.String("error", err.Error()))
+		c.Set("error_message", err.Error())
 		return c.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid request payload"})
 	}
 
 	userId, accessToken, refreshToken, err := h.userService.LoginUser(req.LoginIdentifier, req.Password)
 	if err != nil {
 		h.logger.Error("Failed to login user", slog.String("error", err.Error()), slog.String("login", req.LoginIdentifier))
+		c.Set("error_message", err.Error())
 		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}
 
@@ -81,6 +87,7 @@ func (h *Handler) LoginUser(c echo.Context) error {
 	})
 
 	h.logger.Info("User logged in successfully", slog.String("userId", userId), slog.String("login", req.LoginIdentifier))
+	c.Set("log_message", "User logged in successfully")
 	return c.JSON(http.StatusOK, echo.Map{
 		"message":      "User logged in successfully",
 		"user_id":      userId,
@@ -98,10 +105,12 @@ func (h *Handler) LogoutUser(c echo.Context) error {
 	ok, err := h.userService.Logout(refreshToken.Value)
 	if err != nil {
 		h.logger.Error("Failed to logout user", slog.String("error", err.Error()))
+		c.Set("error_message", err.Error())
 		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}
 	if !ok {
 		h.logger.Error("Logout failed unexpectedly")
+		c.Set("error_message", "Logout failed unexpectedly")
 		return c.JSON(http.StatusInternalServerError, echo.Map{"error": "Logout failed"})
 	}
 
@@ -116,7 +125,12 @@ func (h *Handler) LogoutUser(c echo.Context) error {
 	})
 
 	h.logger.Info("User logged out successfully")
+	c.Set("log_message", "User logged out successfully")
 	return c.JSON(http.StatusOK, echo.Map{"message": "User logged out successfully"})
+}
+
+func (h *Handler) GetCurrentUser(c echo.Context) error {
+	return nil
 }
 
 func (h *Handler) GetUserData(c echo.Context) error {
@@ -128,10 +142,6 @@ func (h *Handler) ChangePassword(c echo.Context) error {
 }
 
 func (h *Handler) ForgotPassword(c echo.Context) error {
-	return nil
-}
-
-func (h *Handler) GetCurrentUser(c echo.Context) error {
 	return nil
 }
 

@@ -35,12 +35,14 @@ func NewRouter(handler *Handler, logger *slog.Logger) *Router {
 }
 
 func (r *Router) registerRoutes() {
+	authMiddleware := r.handler.GetAuthMiddleware()
+
 	r.e.POST("/register", r.handler.RegisterUser)
 	r.e.POST("/login", r.handler.LoginUser)
-	r.e.POST("/logout", r.handler.LogoutUser)
-	r.e.POST("/forgot-password", r.handler.ForgotPassword) // Запрос на восстановление пароля
 
-	v1 := r.e.Group("/api/v1", r.handler.GetAuthMiddleware())
+	r.e.POST("/logout", r.handler.LogoutUser, authMiddleware)
+
+	v1 := r.e.Group("/api/v1", authMiddleware)
 	{
 		v1.GET("/users/me", r.handler.GetCurrentUser)            // Получение информации о текущем пользователе
 		v1.PUT("/users/me", r.handler.UpdateCurrentUser)         // Обновление данных профиля текущего пользователя

@@ -1,4 +1,4 @@
-package router
+package middleware
 
 import (
 	"github.com/labstack/echo/v4"
@@ -6,11 +6,16 @@ import (
 	"strings"
 )
 
-type AuthMiddleware struct {
-	userService UserService
+type AuthService interface {
+	ValidateToken(token string) (bool, error)
+	RefreshToken(refreshToken string) (string, string, error)
 }
 
-func (h *AuthMiddleware) UserIdentity(next echo.HandlerFunc) echo.HandlerFunc {
+type AuthMiddleware struct {
+	AuthService AuthService
+}
+
+func (am *AuthMiddleware) UserIdentity(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		authHeader := c.Request().Header.Get("Authorization")
 		if authHeader == "" {
@@ -24,11 +29,11 @@ func (h *AuthMiddleware) UserIdentity(next echo.HandlerFunc) echo.HandlerFunc {
 		accessToken := strings.TrimPrefix(authHeader, bearerPrefix)
 
 		// TODO: Добавить проверку токена в кэше (например, Redis)
-		// if cached, err := h.checkTokenInCache(accessToken); cached {
+		// if cached, err := am.checkTokenInCache(accessToken); cached {
 		//     return next(c)
 		// }
 
-		valid, err := h.userService.ValidateToken(accessToken)
+		valid, err := am.AuthService.ValidateToken(accessToken)
 		if err != nil {
 			return c.JSON(http.StatusUnauthorized, echo.Map{"error": "Failed to validate token"})
 		}
@@ -42,7 +47,7 @@ func (h *AuthMiddleware) UserIdentity(next echo.HandlerFunc) echo.HandlerFunc {
 			return c.JSON(http.StatusUnauthorized, echo.Map{"error": "Refresh token is required"})
 		}
 
-		newAccessToken, newRefreshToken, err := h.userService.RefreshToken(refreshCookie.Value)
+		newAccessToken, newRefreshToken, err := am.AuthService.RefreshToken(refreshCookie.Value)
 		if err != nil {
 			return c.JSON(http.StatusUnauthorized, echo.Map{"error": "Failed to refresh token"})
 		}
