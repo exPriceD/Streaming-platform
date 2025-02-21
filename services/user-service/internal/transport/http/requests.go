@@ -1,4 +1,4 @@
-package router
+package httpTransport
 
 type RegisterRequest struct {
 	Username        string `json:"username"`

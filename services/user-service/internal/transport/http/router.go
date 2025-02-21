@@ -1,4 +1,4 @@
-package router
+package httpTransport
 
 import (
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/config"

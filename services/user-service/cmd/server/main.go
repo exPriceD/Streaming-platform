@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"github.com/exPriceD/Streaming-platform/pkg/db"
 	logging "github.com/exPriceD/Streaming-platform/pkg/logger"
@@ -8,8 +9,12 @@ import (
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/config"
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/repository"
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/service"
-	router "github.com/exPriceD/Streaming-platform/services/user-service/internal/transport/http"
+	"github.com/exPriceD/Streaming-platform/services/user-service/internal/transport/http"
 	"log/slog"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 )
 
 func main() {
@@ -54,13 +59,36 @@ func main() {
 	userService := service.NewUserService(clients.Auth, userRepo, logger)
 	logger.Info("🔧 Services are initialized")
 
-	handler := router.NewHandler(userService, logger)
+	handler := httpTransport.NewHandler(userService, logger)
 	logger.Info("🔧 Handlers are initialized")
 
-	r := router.NewRouter(handler, logger, &cfg.CORS)
+	httpRouter := httpTransport.NewRouter(handler, logger, &cfg.CORS)
+	logger.Info("🔧 HTTP Router is initialized")
 
-	httpServerAddr := fmt.Sprintf("%s:%d", cfg.HTTP.Host, cfg.HTTP.Port)
-	if err := r.Run(httpServerAddr); err != nil {
-		logger.Error("❌ Server error", slog.String("error", err.Error()))
+	go func() {
+		httpAddr := fmt.Sprintf("%s:%d", cfg.HTTP.Host, cfg.HTTP.Port)
+		if err := httpRouter.Run(httpAddr); err != nil {
+			logger.Error("❌ HTTP Server error", slog.String("error", err.Error()))
+		}
+	}()
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	<-sigChan
+
+	_, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := database.Close(); err != nil {
+		logger.Error("Couldn't close the database", slog.String("error", err.Error()))
+	} else {
+		logger.Info("✅ The database connection is closed")
 	}
+	if err := clients.Auth.Close(); err != nil {
+		logger.Error("❌ Failed to close AuthClient connection", slog.String("error", err.Error()))
+	} else {
+		logger.Info("✅ AuthClient connection closed")
+	}
+	logger.Info("Server shut down gracefully")
+
 }
