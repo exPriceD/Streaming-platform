@@ -37,6 +37,21 @@ func (s *Server) Run(addr string) error {
 
 func (s *Server) Shutdown(ctx context.Context) error {
 	s.logger.Info("Shutting down gRPC server")
-	s.server.GracefulStop()
-	return nil
+
+	done := make(chan struct{})
+
+	go func() {
+		s.server.GracefulStop()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		s.logger.Info("gRPC server stopped gracefully")
+		return nil
+	case <-ctx.Done():
+		s.logger.Warn("Graceful stop timed out, forcing shutdown", slog.String("error", ctx.Err().Error()))
+		s.server.Stop()
+		return ctx.Err()
+	}
 }
