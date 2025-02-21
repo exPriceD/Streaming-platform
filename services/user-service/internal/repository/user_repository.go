@@ -41,14 +41,14 @@ func (r *UserRepository) CreateUser(user *entity.User) error {
 
 func (r *UserRepository) GetUserByEmail(email string) (*entity.User, error) {
 	query := `
-        SELECT id, email, password_hash, consent_to_data_processing, created_at, updated_at
+        SELECT id, username, email, password_hash, avatar_url, consent_to_data_processing, created_at, updated_at
         FROM users
         WHERE email = $1
     `
 
 	var user model.User
 	err := r.db.QueryRow(query, email).
-		Scan(&user.ID, &user.Email, &user.PasswordHash, &user.ConsentToDataProcessing, &user.CreatedAt, &user.UpdatedAt)
+		Scan(&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.AvatarURL, &user.ConsentToDataProcessing, &user.CreatedAt, &user.UpdatedAt)
 
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, errors.New("the user was not found")
@@ -61,7 +61,7 @@ func (r *UserRepository) GetUserByEmail(email string) (*entity.User, error) {
 
 func (r *UserRepository) GetUserByUsername(username string) (*entity.User, error) {
 	query := `
-        SELECT id, username, email, password_hash, avatrt_url, consent_to_data_processing, created_at, updated_at
+        SELECT id, username, email, password_hash, avatar_url, consent_to_data_processing, created_at, updated_at
         FROM users
         WHERE username = $1
     `
@@ -74,7 +74,7 @@ func (r *UserRepository) GetUserByUsername(username string) (*entity.User, error
 		)
 
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, errors.New("пользователь не найден")
+		return nil, errors.New("the user was not found")
 	}
 
 	mappedUser := mapModelToEntity(&user)
