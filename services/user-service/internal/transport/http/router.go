@@ -1,11 +1,10 @@
 package router
 
 import (
+	"github.com/exPriceD/Streaming-platform/services/user-service/internal/transport/http/middleware"
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
-	"io"
-	"log"
-	"os"
+	echoMiddleware "github.com/labstack/echo/v4/middleware"
+	"log/slog"
 )
 
 type Router struct {
@@ -13,17 +12,17 @@ type Router struct {
 	handler *Handler
 }
 
-func NewRouter(handler *Handler) *Router {
+func NewRouter(handler *Handler, logger *slog.Logger) *Router {
 	e := echo.New()
 
-	mw := io.MultiWriter(os.Stdout, setLogsFile())
-
-	e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
-		Format: `{"time":"${time_rfc3339_nano}", "method":"${method}","uri":"${uri}", "status":${status},"error":"${error}"}` + "\n",
-		Output: mw,
+	e.Use(middleware.NewLoggerMiddleware(middleware.LoggerMiddlewareConfig{
+		Logger:       logger,
+		ConsoleLevel: slog.LevelInfo,
+		FileLevel:    slog.LevelDebug,
+		LogFilePath:  "logs/requests.log",
 	}))
 
-	e.Use(middleware.Recover())
+	e.Use(echoMiddleware.Recover())
 
 	router := &Router{
 		e:       e,
@@ -33,14 +32,6 @@ func NewRouter(handler *Handler) *Router {
 	router.registerRoutes()
 
 	return router
-}
-
-func setLogsFile() *os.File {
-	file, err := os.OpenFile("logs/requests.log", os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return file
 }
 
 func (r *Router) registerRoutes() {
