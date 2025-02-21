@@ -8,7 +8,6 @@ import (
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/clients"
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/entity"
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/utils"
-	"log"
 	"log/slog"
 )
 
@@ -31,7 +30,7 @@ func NewUserService(authClient *clients.AuthClient, userRepo UserRepository, log
 func (s *UserService) RegisterUser(username, email, password, confirmPassword string, consent bool) (string, string, string, *entity.User, error) {
 	user, err := entity.NewUser(username, email, password, confirmPassword, consent)
 	if err != nil {
-		log.Printf("User creation error: %v", err)
+		return "", "", "", nil, err
 	}
 
 	err = s.userRepo.CreateUser(user)
