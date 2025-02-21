@@ -19,7 +19,7 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 
-func (r *UserRepository) CreateUser(user *entity.User) error {
+func (r *UserRepository) CreateUser(ctx context.Context, user *entity.User) error {
 	query := `
 		INSERT INTO users (id, username, email, password_hash, avatar_url, consent_to_data_processing, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -27,7 +27,7 @@ func (r *UserRepository) CreateUser(user *entity.User) error {
 
 	now := time.Now()
 
-	_, err := r.db.Exec(query, user.ID, user.Username, user.Email, user.PasswordHash, user.AvatarURL, user.ConsentToDataProcessing, now, now)
+	_, err := r.db.ExecContext(ctx, query, user.ID, user.Username, user.Email, user.PasswordHash, user.AvatarURL, user.ConsentToDataProcessing, now, now)
 
 	if err != nil {
 		var pqErr *pq.Error
@@ -40,7 +40,7 @@ func (r *UserRepository) CreateUser(user *entity.User) error {
 	return nil
 }
 
-func (r *UserRepository) GetUserByEmail(email string) (*entity.User, error) {
+func (r *UserRepository) GetUserByEmail(ctx context.Context, email string) (*entity.User, error) {
 	query := `
         SELECT id, username, email, password_hash, avatar_url, consent_to_data_processing, created_at, updated_at
         FROM users
@@ -48,7 +48,7 @@ func (r *UserRepository) GetUserByEmail(email string) (*entity.User, error) {
     `
 
 	var user model.User
-	err := r.db.QueryRow(query, email).
+	err := r.db.QueryRowContext(ctx, query, email).
 		Scan(&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.AvatarURL, &user.ConsentToDataProcessing, &user.CreatedAt, &user.UpdatedAt)
 
 	if errors.Is(err, sql.ErrNoRows) {
@@ -60,7 +60,7 @@ func (r *UserRepository) GetUserByEmail(email string) (*entity.User, error) {
 	return mappedUser, err
 }
 
-func (r *UserRepository) GetUserByUsername(username string) (*entity.User, error) {
+func (r *UserRepository) GetUserByUsername(ctx context.Context, username string) (*entity.User, error) {
 	query := `
         SELECT id, username, email, password_hash, avatar_url, consent_to_data_processing, created_at, updated_at
         FROM users
@@ -68,7 +68,7 @@ func (r *UserRepository) GetUserByUsername(username string) (*entity.User, error
     `
 
 	var user model.User
-	err := r.db.QueryRow(query, username).
+	err := r.db.QueryRowContext(ctx, query, username).
 		Scan(
 			&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.AvatarURL,
 			&user.ConsentToDataProcessing, &user.CreatedAt, &user.UpdatedAt,
@@ -83,12 +83,12 @@ func (r *UserRepository) GetUserByUsername(username string) (*entity.User, error
 	return mappedUser, err
 }
 
-func (r *UserRepository) UpdateUser(user *entity.User) (*entity.User, error) {
+func (r *UserRepository) UpdateUser(ctx context.Context, user *entity.User) (*entity.User, error) {
 	query := `UPDATE users SET username = $1, email = $2, avatar_url = $3, updated_at = $4 WHERE id = $5 RETURNING id`
 
 	now := time.Now()
 
-	err := r.db.QueryRow(query, user.Username, user.Email, user.AvatarURL, now, user.ID).Scan(&user.ID)
+	err := r.db.QueryRowContext(ctx, query, user.Username, user.Email, user.AvatarURL, now, user.ID).Scan(&user.ID)
 	if err != nil {
 		log.Println("Error updating user:", err)
 		return nil, err

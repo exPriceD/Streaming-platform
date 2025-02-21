@@ -12,9 +12,9 @@ import (
 )
 
 type UserRepository interface {
-	CreateUser(user *entity.User) error
-	GetUserByEmail(email string) (*entity.User, error)
-	GetUserByUsername(username string) (*entity.User, error)
+	CreateUser(ctx context.Context, user *entity.User) error
+	GetUserByEmail(ctx context.Context, email string) (*entity.User, error)
+	GetUserByUsername(ctx context.Context, username string) (*entity.User, error)
 	GetByID(ctx context.Context, userID string) (*entity.User, error)
 }
 
@@ -28,13 +28,13 @@ func NewUserService(authClient *clients.AuthClient, userRepo UserRepository, log
 	return &UserService{authClient: authClient, userRepo: userRepo, log: logger}
 }
 
-func (s *UserService) RegisterUser(username, email, password, confirmPassword string, consent bool) (string, string, string, *entity.User, error) {
+func (s *UserService) RegisterUser(ctx context.Context, username, email, password, confirmPassword string, consent bool) (string, string, string, *entity.User, error) {
 	user, err := entity.NewUser(username, email, password, confirmPassword, consent)
 	if err != nil {
 		return "", "", "", nil, err
 	}
 
-	err = s.userRepo.CreateUser(user)
+	err = s.userRepo.CreateUser(ctx, user)
 	if err != nil {
 		return "", "", "", nil, err
 	}
@@ -47,14 +47,14 @@ func (s *UserService) RegisterUser(username, email, password, confirmPassword st
 	return user.ID.String(), resp.AccessToken, resp.RefreshToken, user, nil
 }
 
-func (s *UserService) LoginUser(loginIdentifier, password string) (string, string, string, error) {
+func (s *UserService) LoginUser(ctx context.Context, loginIdentifier, password string) (string, string, string, error) {
 	var user *entity.User
 	var err error
 
 	if utils.IsEmail(loginIdentifier) {
-		user, err = s.userRepo.GetUserByEmail(loginIdentifier)
+		user, err = s.userRepo.GetUserByEmail(ctx, loginIdentifier)
 	} else {
-		user, err = s.userRepo.GetUserByUsername(loginIdentifier)
+		user, err = s.userRepo.GetUserByUsername(ctx, loginIdentifier)
 	}
 
 	if err != nil {
