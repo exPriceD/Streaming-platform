@@ -106,6 +106,10 @@ func main() {
 		logger.Error("Failed to shutdown gRPC server", slog.String("error", err.Error()))
 	}
 
+	if err := httpRouter.Shutdown(ctx); err != nil {
+		logger.Error("Failed to shutdown HTTP server", slog.String("error", err.Error()))
+	}
+
 	wg.Wait()
 
 	if err := database.Close(); err != nil {

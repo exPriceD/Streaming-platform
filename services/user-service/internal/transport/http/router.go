@@ -1,6 +1,7 @@
 package httpTransport
 
 import (
+	"context"
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/config"
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/transport/http/middleware"
 	"github.com/labstack/echo/v4"
@@ -11,6 +12,7 @@ import (
 type Router struct {
 	e       *echo.Echo
 	handler *Handler
+	logger  *slog.Logger
 }
 
 func NewRouter(handler *Handler, logger *slog.Logger, CORS config.CORSConfig) *Router {
@@ -36,6 +38,7 @@ func NewRouter(handler *Handler, logger *slog.Logger, CORS config.CORSConfig) *R
 	router := &Router{
 		e:       e,
 		handler: handler,
+		logger:  logger,
 	}
 
 	router.registerRoutes()
@@ -66,4 +69,9 @@ func (r *Router) registerRoutes() {
 
 func (r *Router) Run(address string) error {
 	return r.e.Start(address)
+}
+
+func (r *Router) Shutdown(ctx context.Context) error {
+	r.logger.Info("Shutting down HTTP server")
+	return r.e.Shutdown(ctx)
 }
