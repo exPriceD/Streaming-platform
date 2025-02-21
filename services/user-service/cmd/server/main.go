@@ -55,7 +55,7 @@ func main() {
 
 	r := router.NewRouter(handler)
 
-	httpServerAddr := fmt.Sprintf("%s:%d", cfg.Services.AuthService.Host, cfg.Services.AuthService.Port)
+	httpServerAddr := fmt.Sprintf("%s:%d", cfg.HTTP.Host, cfg.HTTP.Port)
 	if err := r.Run(httpServerAddr); err != nil {
 		logger.Error("❌ Server error", slog.String("error", err.Error()))
 	}
