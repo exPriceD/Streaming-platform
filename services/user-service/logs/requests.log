@@ -1,0 +1,5 @@
+{"time":"2025-02-21T20:25:53.5504755+03:00","level":"ERROR","msg":"Request processed","http":{"method":"POST","uri":"/register","status":500,"error":"the user with this email already exists","duration":53344400,"remote_ip":"127.0.0.1"}}
+{"time":"2025-02-21T20:27:00.5646343+03:00","level":"INFO","msg":"User registered successfully","http":{"method":"POST","uri":"/register","status":200,"error":"","duration":277706500,"remote_ip":"127.0.0.1"}}
+{"time":"2025-02-21T20:27:15.3238593+03:00","level":"INFO","msg":"Request processed","http":{"method":"POST","uri":"//login","status":200,"error":"code=404, message=Not Found","duration":0,"remote_ip":"127.0.0.1"}}
+{"time":"2025-02-21T20:30:52.5194452+03:00","level":"ERROR","msg":"Request processed","http":{"method":"POST","uri":"/login","status":500,"error":"пользователь не найден","duration":3219000,"remote_ip":"127.0.0.1"}}
+{"time":"2025-02-21T20:33:13.2567208+03:00","level":"INFO","msg":"User logged in successfully","http":{"method":"POST","uri":"/login","status":200,"error":"","duration":95016100,"remote_ip":"127.0.0.1"}}
