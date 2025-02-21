@@ -99,7 +99,7 @@ func (h *Handler) LogoutUser(c echo.Context) error {
 	refreshToken, err := c.Cookie("refreshToken")
 	if err != nil {
 		h.logger.Warn("No refresh token found during logout")
-		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "No refresh token found"})
+		return c.JSON(http.StatusUnauthorized, echo.Map{"error": "No refresh token found"})
 	}
 
 	ok, err := h.userService.Logout(refreshToken.Value)
