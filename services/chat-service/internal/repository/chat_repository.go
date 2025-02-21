@@ -66,7 +66,7 @@ func (r *ChatRepositoryImpl) DeleteMessage(ctx context.Context, messageID uuid.U
 }
 
 // CreateRoom создает комнату в PostgreSQL
-func (r *ChatRepositoryImpl) CreateRoom(ctx context.Context, streamID uuid.UUID, title string) (*model.ChatRoom, error) {
+func (r *ChatRepositoryImpl) CreateRoom(ctx context.Context, streamID uuid.UUID, title string) (*entity.ChatRoom, error) {
 	room := &model.ChatRoom{
 		ID:          uuid.New(),
 		StreamID:    streamID,
@@ -77,7 +77,7 @@ func (r *ChatRepositoryImpl) CreateRoom(ctx context.Context, streamID uuid.UUID,
 	if err := r.pgDB.WithContext(ctx).Create(room).Error; err != nil {
 		return nil, err
 	}
-	return room, nil
+	return room.ToEntity(), nil
 }
 
 // GetRoom получает комнату по streamID
