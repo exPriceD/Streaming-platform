@@ -8,7 +8,6 @@ import (
 	"github.com/exPriceD/Streaming-platform/services/streaming-service/internal/handler"
 	"github.com/exPriceD/Streaming-platform/services/streaming-service/internal/repository"
 	"github.com/exPriceD/Streaming-platform/services/streaming-service/internal/service"
-	auth "github.com/exPriceD/Streaming-platform/services/streaming-service/internal/token"
 	"github.com/labstack/echo/v4"
 )
 
@@ -26,9 +25,6 @@ func main() {
 	}
 	defer db.Close()
 
-	// Создаём JWT менеджер
-	jwtManager := auth.NewJWTManager(cfg)
-
 	// Создаём Echo сервер
 	e := echo.New()
 
@@ -41,7 +37,7 @@ func main() {
 	streamService := service.NewStreamService(streamRepo, ffmpegService, userRepo, baseStreamURL)
 
 	// Регистрируем обработчики
-	handler.NewStreamHandler(e, streamService, jwtManager)
+	handler.NewStreamHandler(e, streamService)
 
 	// Запускаем сервер
 	address := cfg.Server.Host + ":" + cfg.Server.Port
