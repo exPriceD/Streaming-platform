@@ -1,6 +1,7 @@
 package httpTransport
 
 import (
+	"context"
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/entity"
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/transport/http/middleware"
 	"github.com/labstack/echo/v4"
@@ -9,11 +10,11 @@ import (
 )
 
 type UserService interface {
-	RegisterUser(username, email, password, confirmPassword string, consent bool) (string, string, string, *entity.User, error)
-	LoginUser(loginIdentifier, password string) (string, string, string, error)
-	ValidateToken(accessToken string) (bool, error)
-	RefreshToken(refreshToken string) (string, string, error)
-	Logout(refreshToken string) (bool, error)
+	RegisterUser(ctx context.Context, username, email, password, confirmPassword string, consent bool) (string, string, string, *entity.User, error)
+	LoginUser(ctx context.Context, loginIdentifier, password string) (string, string, string, error)
+	ValidateToken(ctx context.Context, accessToken string) (bool, error)
+	RefreshToken(ctx context.Context, refreshToken string) (string, string, error)
+	Logout(ctx context.Context, refreshToken string) (bool, error)
 }
 
 type Handler struct {
@@ -30,6 +31,8 @@ func (h *Handler) GetAuthMiddleware() echo.MiddlewareFunc {
 }
 
 func (h *Handler) RegisterUser(c echo.Context) error {
+	ctx := c.Request().Context()
+
 	var req RegisterRequest
 	if err := c.Bind(&req); err != nil {
 		h.logger.Error("Failed to bind request", slog.String("error", err.Error()))
@@ -37,7 +40,7 @@ func (h *Handler) RegisterUser(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid request payload"})
 	}
 
-	userId, accessToken, refreshToken, _, err := h.userService.RegisterUser(req.Username, req.Email, req.Password, req.ConfirmPassword, req.Consent)
+	userId, accessToken, refreshToken, _, err := h.userService.RegisterUser(ctx, req.Username, req.Email, req.Password, req.ConfirmPassword, req.Consent)
 	if err != nil {
 		h.logger.Error("Failed to register user", slog.String("error", err.Error()), slog.String("email", req.Email))
 		c.Set("error_message", err.Error())
@@ -63,6 +66,8 @@ func (h *Handler) RegisterUser(c echo.Context) error {
 }
 
 func (h *Handler) LoginUser(c echo.Context) error {
+	ctx := c.Request().Context()
+
 	var req LoginRequest
 	if err := c.Bind(&req); err != nil {
 		h.logger.Error("Failed to bind login request", slog.String("error", err.Error()))
@@ -70,7 +75,7 @@ func (h *Handler) LoginUser(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid request payload"})
 	}
 
-	userId, accessToken, refreshToken, err := h.userService.LoginUser(req.LoginIdentifier, req.Password)
+	userId, accessToken, refreshToken, err := h.userService.LoginUser(ctx, req.LoginIdentifier, req.Password)
 	if err != nil {
 		h.logger.Error("Failed to login user", slog.String("error", err.Error()), slog.String("login", req.LoginIdentifier))
 		c.Set("error_message", err.Error())
@@ -96,13 +101,15 @@ func (h *Handler) LoginUser(c echo.Context) error {
 }
 
 func (h *Handler) LogoutUser(c echo.Context) error {
+	ctx := c.Request().Context()
+
 	refreshToken, err := c.Cookie("refreshToken")
 	if err != nil {
 		h.logger.Warn("No refresh token found during logout")
 		return c.JSON(http.StatusUnauthorized, echo.Map{"error": "No refresh token found"})
 	}
 
-	ok, err := h.userService.Logout(refreshToken.Value)
+	ok, err := h.userService.Logout(ctx, refreshToken.Value)
 	if err != nil {
 		h.logger.Error("Failed to logout user", slog.String("error", err.Error()))
 		c.Set("error_message", err.Error())

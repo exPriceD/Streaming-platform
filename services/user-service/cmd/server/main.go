@@ -19,7 +19,10 @@ import (
 	"time"
 )
 
-const shutdownTimeout = 5 * time.Second
+var (
+	network         = "tcp"
+	shutdownTimeout = 5 * time.Second
+)
 
 func main() {
 	logger := logging.InitLogger("user-service")

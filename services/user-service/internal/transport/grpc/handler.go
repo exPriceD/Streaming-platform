@@ -3,19 +3,23 @@ package grpcTransport
 import (
 	"context"
 	pb "github.com/exPriceD/Streaming-platform/pkg/proto/v1/user"
-	"github.com/exPriceD/Streaming-platform/services/user-service/internal/service"
+	"github.com/exPriceD/Streaming-platform/services/user-service/internal/entity"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"log/slog"
 )
 
+type UserService interface {
+	GetUser(ctx context.Context, userID string) (*entity.User, error)
+}
+
 type Handler struct {
 	pb.UnimplementedUserServiceServer
-	userService *service.UserService
+	userService UserService
 	logger      *slog.Logger
 }
 
-func NewHandler(userService *service.UserService, logger *slog.Logger) *Handler {
+func NewHandler(userService UserService, logger *slog.Logger) *Handler {
 	return &Handler{
 		userService: userService,
 		logger:      logger,

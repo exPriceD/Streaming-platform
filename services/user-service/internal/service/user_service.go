@@ -39,7 +39,7 @@ func (s *UserService) RegisterUser(ctx context.Context, username, email, passwor
 		return "", "", "", nil, err
 	}
 
-	resp, err := s.authenticateUser(user.ID.String())
+	resp, err := s.authenticateUser(ctx, user.ID.String())
 	if err != nil {
 		return "", "", "", nil, err
 	}
@@ -65,24 +65,24 @@ func (s *UserService) LoginUser(ctx context.Context, loginIdentifier, password s
 		return "", "", "", errors.New("incorrect password")
 	}
 
-	resp, err := s.authenticateUser(user.ID.String())
+	resp, err := s.authenticateUser(ctx, user.ID.String())
 	if err != nil {
 		return "", "", "", err
 	}
 	return user.ID.String(), resp.AccessToken, resp.RefreshToken, nil
 }
 
-func (s *UserService) authenticateUser(userID string) (*authProto.AuthenticateResponse, error) {
+func (s *UserService) authenticateUser(ctx context.Context, userID string) (*authProto.AuthenticateResponse, error) {
 	req := &authProto.AuthenticateRequest{UserId: userID}
-	resp, err := s.authClient.Authenticate(context.Background(), req)
+	resp, err := s.authClient.Authenticate(ctx, req)
 	if err != nil || resp.Error != nil {
 		return nil, err
 	}
 	return resp, nil
 }
 
-func (s *UserService) ValidateToken(accessToken string) (bool, error) {
-	validateResp, err := s.authClient.ValidateToken(context.Background(), accessToken)
+func (s *UserService) ValidateToken(ctx context.Context, accessToken string) (bool, error) {
+	validateResp, err := s.authClient.ValidateToken(ctx, accessToken)
 	if err != nil || validateResp.Error != nil {
 		return false, err
 	}
@@ -97,8 +97,8 @@ func (s *UserService) ValidateToken(accessToken string) (bool, error) {
 
 	return false, nil
 }
-func (s *UserService) RefreshToken(refreshToken string) (string, string, error) {
-	refreshResp, err := s.authClient.RefreshToken(context.Background(), refreshToken)
+func (s *UserService) RefreshToken(ctx context.Context, refreshToken string) (string, string, error) {
+	refreshResp, err := s.authClient.RefreshToken(ctx, refreshToken)
 	if err != nil || refreshResp.Error != nil {
 		return "", "", err
 	}
@@ -109,8 +109,8 @@ func (s *UserService) RefreshToken(refreshToken string) (string, string, error) 
 	return refreshResp.AccessToken, refreshResp.RefreshToken, nil
 }
 
-func (s *UserService) Logout(refreshToken string) (bool, error) {
-	logoutResp, err := s.authClient.Logout(context.Background(), refreshToken)
+func (s *UserService) Logout(ctx context.Context, refreshToken string) (bool, error) {
+	logoutResp, err := s.authClient.Logout(ctx, refreshToken)
 	if err != nil {
 		return false, err
 	}

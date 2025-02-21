@@ -1,14 +1,15 @@
 package middleware
 
 import (
+	"context"
 	"github.com/labstack/echo/v4"
 	"net/http"
 	"strings"
 )
 
 type AuthService interface {
-	ValidateToken(token string) (bool, error)
-	RefreshToken(refreshToken string) (string, string, error)
+	ValidateToken(ctx context.Context, token string) (bool, error)
+	RefreshToken(ctx context.Context, refreshToken string) (string, string, error)
 }
 
 type AuthMiddleware struct {
@@ -17,6 +18,8 @@ type AuthMiddleware struct {
 
 func (am *AuthMiddleware) UserIdentity(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
+		ctx := c.Request().Context()
+
 		authHeader := c.Request().Header.Get("Authorization")
 		if authHeader == "" {
 			return c.JSON(http.StatusBadRequest, echo.Map{"error": "Authorization header is required"})
@@ -33,7 +36,7 @@ func (am *AuthMiddleware) UserIdentity(next echo.HandlerFunc) echo.HandlerFunc {
 		//     return next(c)
 		// }
 
-		valid, err := am.AuthService.ValidateToken(accessToken)
+		valid, err := am.AuthService.ValidateToken(ctx, accessToken)
 		if err != nil {
 			return c.JSON(http.StatusUnauthorized, echo.Map{"error": "Failed to validate token"})
 		}
@@ -47,7 +50,7 @@ func (am *AuthMiddleware) UserIdentity(next echo.HandlerFunc) echo.HandlerFunc {
 			return c.JSON(http.StatusUnauthorized, echo.Map{"error": "Refresh token is required"})
 		}
 
-		newAccessToken, newRefreshToken, err := am.AuthService.RefreshToken(refreshCookie.Value)
+		newAccessToken, newRefreshToken, err := am.AuthService.RefreshToken(ctx, refreshCookie.Value)
 		if err != nil {
 			return c.JSON(http.StatusUnauthorized, echo.Map{"error": "Failed to refresh token"})
 		}
