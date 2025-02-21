@@ -1,16 +1,28 @@
-package grpc
+package grpcTransport
 
 import (
 	"context"
+	pb "github.com/exPriceD/Streaming-platform/pkg/proto/v1/user"
 	"google.golang.org/grpc"
 	"log/slog"
 	"net"
 )
 
 type Server struct {
-	pb.UnimplementedUserServiceServer // Встраиваем базовую реализацию из generated кода
-	logger                            *slog.Logger
-	server                            *grpc.Server
+	pb.UnimplementedUserServiceServer
+	server  *grpc.Server
+	handler *Handler
+	logger  *slog.Logger
+}
+
+func NewGRPCServer(handler *Handler, logger *slog.Logger) *Server {
+	srv := &Server{
+		server:  grpc.NewServer(),
+		handler: handler,
+		logger:  logger,
+	}
+	pb.RegisterUserServiceServer(srv.server, srv)
+	return srv
 }
 
 func (s *Server) Run(addr string) error {
