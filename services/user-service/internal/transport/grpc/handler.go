@@ -1,8 +1,11 @@
-package grpc
+package grpcTransport
 
 import (
 	"context"
+	pb "github.com/exPriceD/Streaming-platform/pkg/proto/v1/user"
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/service"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"log/slog"
 )
 
@@ -25,14 +28,13 @@ func (h *Handler) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.GetU
 	user, err := h.userService.GetUser(ctx, req.UserId)
 	if err != nil {
 		h.logger.Error("Failed to get user", slog.String("error", err.Error()), slog.String("user_id", req.UserId))
-		return nil, err
+		return nil, status.Errorf(codes.NotFound, "user not found: %v", err)
 	}
 
 	return &pb.GetUserResponse{
-		UserId:    user.ID,
+		UserId:    user.ID.String(),
 		Username:  user.Username,
 		Email:     user.Email,
-		Consent:   user.Consent,
 		AvatarUrl: user.AvatarURL,
 	}, nil
 }
