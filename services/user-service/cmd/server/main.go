@@ -57,7 +57,7 @@ func main() {
 	handler := router.NewHandler(userService, logger)
 	logger.Info("🔧 Handlers are initialized")
 
-	r := router.NewRouter(handler)
+	r := router.NewRouter(handler, logger)
 
 	httpServerAddr := fmt.Sprintf("%s:%d", cfg.HTTP.Host, cfg.HTTP.Port)
 	if err := r.Run(httpServerAddr); err != nil {
