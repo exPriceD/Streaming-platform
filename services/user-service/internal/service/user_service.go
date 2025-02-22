@@ -81,21 +81,21 @@ func (s *UserService) authenticateUser(ctx context.Context, userID string) (*aut
 	return resp, nil
 }
 
-func (s *UserService) ValidateToken(ctx context.Context, accessToken string) (bool, error) {
+func (s *UserService) ValidateToken(ctx context.Context, accessToken string) (bool, string, error) {
 	validateResp, err := s.authClient.ValidateToken(ctx, accessToken)
 	if err != nil || validateResp.Error != nil {
-		return false, err
+		return false, "", err
 	}
 
 	if validateResp.Error != nil {
-		return false, fmt.Errorf("invalid token: %v", validateResp.Error)
+		return false, "", fmt.Errorf("invalid token: %v", validateResp.Error)
 	}
 
 	if validateResp.Valid {
-		return true, nil
+		return true, validateResp.UserId, nil
 	}
 
-	return false, nil
+	return false, "", nil
 }
 func (s *UserService) RefreshToken(ctx context.Context, refreshToken string) (string, string, error) {
 	refreshResp, err := s.authClient.RefreshToken(ctx, refreshToken)

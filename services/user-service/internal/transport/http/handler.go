@@ -12,7 +12,7 @@ import (
 type UserService interface {
 	RegisterUser(ctx context.Context, username, email, password, confirmPassword string, consent bool) (string, string, string, *entity.User, error)
 	LoginUser(ctx context.Context, loginIdentifier, password string) (string, string, string, error)
-	ValidateToken(ctx context.Context, accessToken string) (bool, error)
+	ValidateToken(ctx context.Context, accessToken string) (bool, string, error)
 	RefreshToken(ctx context.Context, refreshToken string) (string, string, error)
 	Logout(ctx context.Context, refreshToken string) (bool, error)
 }

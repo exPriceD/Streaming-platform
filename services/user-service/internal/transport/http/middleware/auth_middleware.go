@@ -8,7 +8,7 @@ import (
 )
 
 type AuthService interface {
-	ValidateToken(ctx context.Context, token string) (bool, error)
+	ValidateToken(ctx context.Context, token string) (bool, string, error)
 	RefreshToken(ctx context.Context, refreshToken string) (string, string, error)
 }
 
@@ -36,12 +36,13 @@ func (am *AuthMiddleware) UserIdentity(next echo.HandlerFunc) echo.HandlerFunc {
 		//     return next(c)
 		// }
 
-		valid, err := am.AuthService.ValidateToken(ctx, accessToken)
+		valid, userId, err := am.AuthService.ValidateToken(ctx, accessToken)
 		if err != nil {
 			return c.JSON(http.StatusUnauthorized, echo.Map{"error": "Failed to validate token"})
 		}
 
 		if valid {
+			c.Set("userId", userId)
 			return next(c)
 		}
 
