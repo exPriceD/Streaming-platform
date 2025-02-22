@@ -36,7 +36,7 @@ func (h *Handler) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.GetU
 	}
 
 	return &pb.GetUserResponse{
-		UserId:    user.ID.String(),
+		UserId:    user.Id.String(),
 		Username:  user.Username,
 		Email:     user.Email,
 		AvatarUrl: user.AvatarURL,

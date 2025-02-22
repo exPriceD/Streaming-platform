@@ -47,7 +47,7 @@ func (r *UserRepository) CreateUser(ctx context.Context, user *entity.User) erro
 	now := time.Now()
 
 	_, err := r.db.ExecContext(ctx, queryCreateUser,
-		user.ID, user.Username, user.Email, user.PasswordHash, user.AvatarURL,
+		user.Id, user.Username, user.Email, user.PasswordHash, user.AvatarURL,
 		user.ConsentToDataProcessing, now, now,
 	)
 
@@ -67,7 +67,7 @@ func (r *UserRepository) getUserByField(ctx context.Context, field, value string
 	var user model.User
 
 	err := r.db.QueryRowContext(ctx, query, value).Scan(
-		&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.AvatarURL,
+		&user.Id, &user.Username, &user.Email, &user.PasswordHash, &user.AvatarURL,
 		&user.ConsentToDataProcessing, &user.CreatedAt, &user.UpdatedAt,
 	)
 
@@ -95,8 +95,8 @@ func (r *UserRepository) UpdateUser(ctx context.Context, user *entity.User) (*en
 	now := time.Now()
 
 	err := r.db.QueryRowContext(ctx, queryUpdateUser,
-		user.Username, user.Email, user.AvatarURL, now, user.ID,
-	).Scan(&user.ID)
+		user.Username, user.Email, user.AvatarURL, now, user.Id,
+	).Scan(&user.Id)
 
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, customErrors.ErrUserNotFound
@@ -111,11 +111,11 @@ func (r *UserRepository) UpdateUser(ctx context.Context, user *entity.User) (*en
 	return user, nil
 }
 
-func (r *UserRepository) GetUserByID(ctx context.Context, userID string) (*entity.User, error) {
+func (r *UserRepository) GetUserByID(ctx context.Context, userId string) (*entity.User, error) {
 	var user model.User
 
-	err := r.db.QueryRowContext(ctx, queryGetUserByID, userID).Scan(
-		&user.ID, &user.Username, &user.Email, &user.AvatarURL,
+	err := r.db.QueryRowContext(ctx, queryGetUserByID, userId).Scan(
+		&user.Id, &user.Username, &user.Email, &user.AvatarURL,
 	)
 
 	if errors.Is(err, sql.ErrNoRows) {
@@ -123,7 +123,7 @@ func (r *UserRepository) GetUserByID(ctx context.Context, userID string) (*entit
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("get user by ID: %w", err)
+		return nil, fmt.Errorf("get user by Id: %w", err)
 	}
 
 	mappedUser := mapModelToEntity(&user)
@@ -133,7 +133,7 @@ func (r *UserRepository) GetUserByID(ctx context.Context, userID string) (*entit
 
 func mapModelToEntity(user *model.User) *entity.User {
 	return &entity.User{
-		ID:                      user.ID,
+		Id:                      user.Id,
 		Username:                user.Username,
 		Email:                   user.Email,
 		PasswordHash:            user.PasswordHash,

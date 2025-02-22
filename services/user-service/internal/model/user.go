@@ -6,7 +6,7 @@ import (
 )
 
 type User struct {
-	ID                      uuid.UUID `db:"id"`
+	Id                      uuid.UUID `db:"id"`
 	Username                string    `db:"username"`
 	Email                   string    `db:"email"`
 	PasswordHash            string    `db:"password_hash"`

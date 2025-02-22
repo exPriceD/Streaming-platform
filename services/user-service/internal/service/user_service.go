@@ -16,7 +16,7 @@ type UserRepository interface {
 	CreateUser(ctx context.Context, user *entity.User) error
 	GetUserByEmail(ctx context.Context, email string) (*entity.User, error)
 	GetUserByUsername(ctx context.Context, username string) (*entity.User, error)
-	GetUserByID(ctx context.Context, userID string) (*entity.User, error)
+	GetUserByID(ctx context.Context, userId string) (*entity.User, error)
 }
 
 type UserService struct {
@@ -43,12 +43,12 @@ func (s *UserService) RegisterUser(ctx context.Context, username, email, passwor
 		return "", "", "", err
 	}
 
-	resp, err := s.authenticateUser(ctx, user.ID.String())
+	resp, err := s.authenticateUser(ctx, user.Id.String())
 	if err != nil {
 		return "", "", "", fmt.Errorf("authentication error: %w", err)
 	}
 
-	return user.ID.String(), resp.AccessToken, resp.RefreshToken, nil
+	return user.Id.String(), resp.AccessToken, resp.RefreshToken, nil
 }
 
 func (s *UserService) LoginUser(ctx context.Context, loginIdentifier, password string) (string, string, string, error) {
@@ -76,12 +76,12 @@ func (s *UserService) LoginUser(ctx context.Context, loginIdentifier, password s
 		return "", "", "", customErrors.ErrUnauthorized
 	}
 
-	resp, err := s.authenticateUser(ctx, user.ID.String())
+	resp, err := s.authenticateUser(ctx, user.Id.String())
 	if err != nil {
 		return "", "", "", fmt.Errorf("authentication error: %w", err)
 	}
 
-	return user.ID.String(), resp.AccessToken, resp.RefreshToken, nil
+	return user.Id.String(), resp.AccessToken, resp.RefreshToken, nil
 }
 
 func (s *UserService) authenticateUser(ctx context.Context, userId string) (*authProto.AuthenticateResponse, error) {

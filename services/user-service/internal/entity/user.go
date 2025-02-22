@@ -10,7 +10,7 @@ import (
 )
 
 type User struct {
-	ID                      uuid.UUID
+	Id                      uuid.UUID
 	Username                string
 	Email                   string
 	PasswordHash            string
@@ -60,7 +60,7 @@ func NewUser(username, email, password, confirmPassword string, consent bool) (*
 	now := time.Now()
 
 	return &User{
-		ID:                      uuid.New(),
+		Id:                      uuid.New(),
 		Username:                username,
 		Email:                   email,
 		PasswordHash:            hashedPassword,

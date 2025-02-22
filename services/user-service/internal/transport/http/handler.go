@@ -12,12 +12,12 @@ import (
 )
 
 type UserService interface {
-	RegisterUser(ctx context.Context, username, email, password, confirmPassword string, consent bool) (string, string, string, *entity.User, error)
+	RegisterUser(ctx context.Context, username, email, password, confirmPassword string, consent bool) (string, string, string, error)
 	LoginUser(ctx context.Context, loginIdentifier, password string) (string, string, string, error)
 	ValidateToken(ctx context.Context, accessToken string) (bool, string, error)
 	RefreshToken(ctx context.Context, refreshToken string) (string, string, error)
 	Logout(ctx context.Context, refreshToken string) (bool, error)
-	GetUser(ctx context.Context, userId string) (*entity.User, error)
+	GetUserByID(ctx context.Context, userId string) (*entity.User, error)
 }
 
 type Handler struct {
@@ -54,7 +54,7 @@ func (h *Handler) RegisterUser(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Invalid request payload"})
 	}
 
-	userId, accessToken, refreshToken, _, err := h.userService.RegisterUser(ctx, req.Username, req.Email, req.Password, req.ConfirmPassword, req.Consent)
+	userId, accessToken, refreshToken, err := h.userService.RegisterUser(ctx, req.Username, req.Email, req.Password, req.ConfirmPassword, req.Consent)
 	if err != nil {
 		h.logger.Error("Failed to register user", slog.String("error", err.Error()), slog.String("email", req.Email))
 		c.Set("error_message", err.Error())
@@ -74,7 +74,7 @@ func (h *Handler) RegisterUser(c echo.Context) error {
 	c.Set("log_message", "User registered successfully")
 	return c.JSON(http.StatusOK, RegisterResponse{
 		Message:     "User registered successfully",
-		UserID:      userId,
+		UserId:      userId,
 		AccessToken: accessToken,
 	})
 }
@@ -120,7 +120,7 @@ func (h *Handler) LoginUser(c echo.Context) error {
 	c.Set("log_message", "User logged in successfully")
 	return c.JSON(http.StatusOK, LoginResponse{
 		Message:     "User logged in successfully",
-		UserID:      userId,
+		UserId:      userId,
 		AccessToken: accessToken,
 	})
 }
@@ -199,7 +199,7 @@ func (h *Handler) GetCurrentUser(c echo.Context) error {
 }
 
 // GetUserByID godoc
-// @Summary Получить данные пользователя по ID
+// @Summary Получить данные пользователя по Id
 // @Description Возвращает информацию о пользователе по его идентификатору. Доступно только аутентифицированным пользователям.
 // @Tags Users
 // @Produce json
@@ -218,7 +218,7 @@ func (h *Handler) GetUserByID(c echo.Context) error {
 	userId := c.Param("userId")
 	if userId == "" {
 		h.logger.Warn("Missing userId in path")
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "User ID is required"})
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "User Id is required"})
 	}
 
 	response, err := h.getUserData(ctx, userId)
@@ -232,14 +232,14 @@ func (h *Handler) GetUserByID(c echo.Context) error {
 }
 
 func (h *Handler) getUserData(ctx context.Context, userId string) (*UserResponse, error) {
-	user, err := h.userService.GetUser(ctx, userId)
+	user, err := h.userService.GetUserByID(ctx, userId)
 	if err != nil {
 		h.logger.Error("Failed to get user data", slog.String("userId", userId), slog.String("error", err.Error()))
 		return nil, err
 	}
 	h.logger.Info("User data retrieved successfully", slog.String("userId", userId))
 	return &UserResponse{
-		UserID:    user.ID.String(),
+		UserId:    user.Id.String(),
 		Username:  user.Username,
 		Email:     user.Email,
 		AvatarURL: user.AvatarURL,
