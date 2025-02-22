@@ -50,6 +50,7 @@ func NewRouter(handler *Handler, logger *slog.Logger, CORS config.CORSConfig) *R
 func (r *Router) registerRoutes() {
 	authMiddleware := r.handler.GetAuthMiddleware()
 
+	// API Version 1 group
 	v1 := r.e.Group("/api/v1")
 	{
 		// Authentication endpoints
@@ -60,18 +61,25 @@ func (r *Router) registerRoutes() {
 			auth.POST("/login", r.handler.LoginUser)
 
 			// Protected
-			auth.POST("/logout", r.handler.LogoutUser, authMiddleware)
+			protectedAuth := auth.Group("", authMiddleware)
+			{
+				protectedAuth.POST("/logout", r.handler.LogoutUser)
+			}
 		}
 
-		// Protected user endpoints
-		users := v1.Group("/users", authMiddleware)
+		// User endpoints
+		users := v1.Group("/users")
 		{
-			users.GET("/me", r.handler.GetCurrentUser)
-			users.PUT("/me", r.handler.UpdateCurrentUser)
-			users.PATCH("/me/password", r.handler.ChangePassword)
+			// Public
 			users.GET("/{userId}", r.handler.GetUserByID)
-			users.PUT("/{userId}", r.handler.UpdateUser)
-			users.DELETE("/{userId}", r.handler.DeleteUser)
+
+			// Protected
+			protectedUsers := users.Group("", authMiddleware)
+			{
+				protectedUsers.GET("/me", r.handler.GetCurrentUser)
+				protectedUsers.PUT("/me", r.handler.UpdateCurrentUser)
+				protectedUsers.PATCH("/me/password", r.handler.ChangePassword)
+			}
 		}
 	}
 
