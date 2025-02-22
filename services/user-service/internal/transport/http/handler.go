@@ -2,6 +2,8 @@ package httpTransport
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/entity"
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/transport/http/middleware"
 	"github.com/labstack/echo/v4"
@@ -189,19 +191,59 @@ func (h *Handler) GetCurrentUser(c echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "User not authenticated"})
 	}
 
+	response, err := h.getUserData(ctx, userId)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to retrieve user data"})
+	}
+	return c.JSON(http.StatusOK, response)
+}
+
+// GetUserByID godoc
+// @Summary Получить данные пользователя по ID
+// @Description Возвращает информацию о пользователе по его идентификатору. Доступно только аутентифицированным пользователям.
+// @Tags Users
+// @Produce json
+// @Security BearerAuth
+// @Security CookieAuth
+// @Param userId path string true "Идентификатор пользователя"
+// @Success 200 {object} UserResponse "Данные пользователя успешно получены"
+// @Failure 400 {object} ErrorResponse "Неверный формат userId"
+// @Failure 401 {object} ErrorResponse "Неавторизован или токен истёк"
+// @Failure 404 {object} ErrorResponse "Пользователь не найден"
+// @Failure 500 {object} ErrorResponse "Ошибка сервера"
+// @Router /api/v1/users/{userId} [get]
+func (h *Handler) GetUserByID(c echo.Context) error {
+	ctx := c.Request().Context()
+
+	userId := c.Param("userId")
+	if userId == "" {
+		h.logger.Warn("Missing userId in path")
+		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "User ID is required"})
+	}
+
+	response, err := h.getUserData(ctx, userId)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return c.JSON(http.StatusNotFound, ErrorResponse{Error: "User not found"})
+		}
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to retrieve user data"})
+	}
+	return c.JSON(http.StatusOK, response)
+}
+
+func (h *Handler) getUserData(ctx context.Context, userId string) (*UserResponse, error) {
 	user, err := h.userService.GetUser(ctx, userId)
 	if err != nil {
 		h.logger.Error("Failed to get user data", slog.String("userId", userId), slog.String("error", err.Error()))
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to retrieve user data"})
+		return nil, err
 	}
-
 	h.logger.Info("User data retrieved successfully", slog.String("userId", userId))
-	return c.JSON(http.StatusOK, UserResponse{
+	return &UserResponse{
 		UserID:    user.ID.String(),
 		Username:  user.Username,
 		Email:     user.Email,
 		AvatarURL: user.AvatarURL,
-	})
+	}, nil
 }
 
 func (h *Handler) GetUserData(c echo.Context) error {
@@ -217,10 +259,6 @@ func (h *Handler) ForgotPassword(c echo.Context) error {
 }
 
 func (h *Handler) UpdateCurrentUser(c echo.Context) error {
-	return nil
-}
-
-func (h *Handler) GetUserByID(c echo.Context) error {
 	return nil
 }
 
