@@ -7,6 +7,7 @@ import (
 	authProto "github.com/exPriceD/Streaming-platform/pkg/proto/v1/auth"
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/clients"
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/entity"
+	customErrors "github.com/exPriceD/Streaming-platform/services/user-service/internal/errors"
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/utils"
 	"log/slog"
 )
@@ -15,7 +16,7 @@ type UserRepository interface {
 	CreateUser(ctx context.Context, user *entity.User) error
 	GetUserByEmail(ctx context.Context, email string) (*entity.User, error)
 	GetUserByUsername(ctx context.Context, username string) (*entity.User, error)
-	GetByID(ctx context.Context, userID string) (*entity.User, error)
+	GetUserByID(ctx context.Context, userID string) (*entity.User, error)
 }
 
 type UserService struct {
@@ -28,26 +29,33 @@ func NewUserService(authClient *clients.AuthClient, userRepo UserRepository, log
 	return &UserService{authClient: authClient, userRepo: userRepo, log: logger}
 }
 
-func (s *UserService) RegisterUser(ctx context.Context, username, email, password, confirmPassword string, consent bool) (string, string, string, *entity.User, error) {
-	user, err := entity.NewUser(username, email, password, confirmPassword, consent)
-	if err != nil {
-		return "", "", "", nil, err
+func (s *UserService) RegisterUser(ctx context.Context, username, email, password, confirmPassword string, consent bool) (string, string, string, error) {
+	if username == "" || email == "" || password == "" {
+		return "", "", "", customErrors.ErrInvalidInput
 	}
 
-	err = s.userRepo.CreateUser(ctx, user)
+	user, err := entity.NewUser(username, email, password, confirmPassword, consent)
 	if err != nil {
-		return "", "", "", nil, err
+		return "", "", "", err
+	}
+
+	if err := s.userRepo.CreateUser(ctx, user); err != nil {
+		return "", "", "", err
 	}
 
 	resp, err := s.authenticateUser(ctx, user.ID.String())
 	if err != nil {
-		return "", "", "", nil, err
+		return "", "", "", fmt.Errorf("authentication error: %w", err)
 	}
 
-	return user.ID.String(), resp.AccessToken, resp.RefreshToken, user, nil
+	return user.ID.String(), resp.AccessToken, resp.RefreshToken, nil
 }
 
 func (s *UserService) LoginUser(ctx context.Context, loginIdentifier, password string) (string, string, string, error) {
+	if loginIdentifier == "" || password == "" {
+		return "", "", "", customErrors.ErrInvalidInput
+	}
+
 	var user *entity.User
 	var err error
 
@@ -58,74 +66,97 @@ func (s *UserService) LoginUser(ctx context.Context, loginIdentifier, password s
 	}
 
 	if err != nil {
-		return "", "", "", err
+		if errors.Is(err, customErrors.ErrUserNotFound) {
+			return "", "", "", err
+		}
+		return "", "", "", fmt.Errorf("login error: %w", err)
 	}
 
 	if !user.CheckPassword(password) {
-		return "", "", "", errors.New("incorrect password")
+		return "", "", "", customErrors.ErrUnauthorized
 	}
 
 	resp, err := s.authenticateUser(ctx, user.ID.String())
 	if err != nil {
-		return "", "", "", err
+		return "", "", "", fmt.Errorf("authentication error: %w", err)
 	}
+
 	return user.ID.String(), resp.AccessToken, resp.RefreshToken, nil
 }
 
-func (s *UserService) authenticateUser(ctx context.Context, userID string) (*authProto.AuthenticateResponse, error) {
-	req := &authProto.AuthenticateRequest{UserId: userID}
+func (s *UserService) authenticateUser(ctx context.Context, userId string) (*authProto.AuthenticateResponse, error) {
+	req := &authProto.AuthenticateRequest{UserId: userId}
 	resp, err := s.authClient.Authenticate(ctx, req)
-	if err != nil || resp.Error != nil {
+	if err != nil {
 		return nil, err
 	}
+	if resp.Error != nil {
+		return nil, fmt.Errorf("authentication failed: %s", resp.Error.Message)
+	}
+
 	return resp, nil
 }
 
 func (s *UserService) ValidateToken(ctx context.Context, accessToken string) (bool, string, error) {
-	validateResp, err := s.authClient.ValidateToken(ctx, accessToken)
-	if err != nil || validateResp.Error != nil {
-		return false, "", err
+	if accessToken == "" {
+		return false, "", customErrors.ErrInvalidInput
 	}
 
-	if validateResp.Error != nil {
-		return false, "", fmt.Errorf("invalid token: %v", validateResp.Error)
+	resp, err := s.authClient.ValidateToken(ctx, accessToken)
+	if err != nil {
+		return false, "", fmt.Errorf("token validation error: %w", err)
+	}
+	if resp.Error != nil {
+		return false, "", nil
 	}
 
-	if validateResp.Valid {
-		return true, validateResp.UserId, nil
-	}
-
-	return false, "", nil
+	return resp.Valid, resp.UserId, nil
 }
+
 func (s *UserService) RefreshToken(ctx context.Context, refreshToken string) (string, string, error) {
-	refreshResp, err := s.authClient.RefreshToken(ctx, refreshToken)
-	if err != nil || refreshResp.Error != nil {
-		return "", "", err
+	if refreshToken == "" {
+		return "", "", customErrors.ErrInvalidInput
 	}
 
-	if refreshResp.Error != nil {
-		return "", "", fmt.Errorf("invalid refresh token: %v", refreshResp.Error)
+	resp, err := s.authClient.RefreshToken(ctx, refreshToken)
+	if err != nil {
+		return "", "", fmt.Errorf("refresh token error: %w", err)
 	}
-	return refreshResp.AccessToken, refreshResp.RefreshToken, nil
+	if resp.Error != nil {
+		return "", "", fmt.Errorf("refresh token rejected: %s", resp.Error.Message)
+	}
+
+	return resp.AccessToken, resp.RefreshToken, nil
 }
 
 func (s *UserService) Logout(ctx context.Context, refreshToken string) (bool, error) {
-	logoutResp, err := s.authClient.Logout(ctx, refreshToken)
-	if err != nil {
-		return false, err
+	if refreshToken == "" {
+		return false, customErrors.ErrInvalidInput
 	}
-	return logoutResp.Success, err
+
+	resp, err := s.authClient.Logout(ctx, refreshToken)
+	if err != nil {
+		return false, fmt.Errorf("logout error: %w", err)
+	}
+	if resp.Error != nil {
+		return false, nil
+	}
+
+	return resp.Success, err
 }
 
-func (s *UserService) GetUser(ctx context.Context, userID string) (*entity.User, error) {
-	user, err := s.userRepo.GetByID(ctx, userID)
-	if err != nil {
-		return nil, err
+func (s *UserService) GetUserByID(ctx context.Context, userId string) (*entity.User, error) {
+	if userId == "" {
+		return nil, customErrors.ErrInvalidInput
 	}
-	return &entity.User{
-		ID:        user.ID,
-		Username:  user.Username,
-		Email:     user.Email,
-		AvatarURL: user.AvatarURL,
-	}, nil
+
+	user, err := s.userRepo.GetUserByID(ctx, userId)
+	if err != nil {
+		if errors.Is(err, customErrors.ErrUserNotFound) {
+			return nil, err
+		}
+		return nil, fmt.Errorf("get user error: %w", err)
+	}
+
+	return user, nil
 }
