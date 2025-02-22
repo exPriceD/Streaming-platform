@@ -6,6 +6,7 @@ import (
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/transport/http/middleware"
 	"github.com/labstack/echo/v4"
 	echoMiddleware "github.com/labstack/echo/v4/middleware"
+	echoSwagger "github.com/swaggo/echo-swagger"
 	"log/slog"
 )
 
@@ -65,6 +66,7 @@ func (r *Router) registerRoutes() {
 	}
 
 	r.e.GET("/health", func(c echo.Context) error { return c.NoContent(200) })
+	r.e.GET("/swagger/*", echoSwagger.WrapHandler)
 }
 
 func (r *Router) Run(address string) error {

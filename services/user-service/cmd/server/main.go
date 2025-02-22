@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/exPriceD/Streaming-platform/pkg/db"
 	logging "github.com/exPriceD/Streaming-platform/pkg/logger"
+	_ "github.com/exPriceD/Streaming-platform/services/user-service/docs"
 	cl "github.com/exPriceD/Streaming-platform/services/user-service/internal/clients"
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/config"
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/repository"
@@ -20,10 +21,22 @@ import (
 )
 
 var (
-	network         = "tcp"
 	shutdownTimeout = 5 * time.Second
 )
 
+// @title User Service API
+// @version 1.0
+// @description API для управления пользователями в стриминговой платформе
+// @host localhost:8080
+// @BasePath /
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Bearer token (JWT) для авторизации
+// @securityDefinitions.apikey CookieAuth
+// @in cookie
+// @name refreshToken
+// @description Refresh-токен в куках для аутентификации
 func main() {
 	logger := logging.InitLogger("user-service")
 
