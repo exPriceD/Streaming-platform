@@ -65,9 +65,8 @@ func (am *AuthMiddleware) UserIdentity(next echo.HandlerFunc) echo.HandlerFunc {
 		})
 
 		return c.JSON(http.StatusUnauthorized, echo.Map{
-			"error":        "Access token expired",
-			"accessToken":  newAccessToken,
-			"refreshToken": newRefreshToken,
+			"error":       "Access token expired",
+			"accessToken": newAccessToken,
 		})
 	}
 }
