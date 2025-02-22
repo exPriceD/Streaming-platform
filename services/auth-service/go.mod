@@ -3,7 +3,7 @@ module github.com/exPriceD/Streaming-platform/services/auth-service
 go 1.23.6
 
 require (
-	github.com/exPriceD/Streaming-platform v0.0.0-20250221000907-eaac4f82a202
+	github.com/exPriceD/Streaming-platform v0.0.0-20250221203122-53ff59204afd
 	github.com/golang-jwt/jwt/v4 v4.5.1
 	github.com/google/uuid v1.6.0
 	github.com/spf13/viper v1.19.0
