@@ -15,6 +15,7 @@ type UserService interface {
 	ValidateToken(ctx context.Context, accessToken string) (bool, string, error)
 	RefreshToken(ctx context.Context, refreshToken string) (string, string, error)
 	Logout(ctx context.Context, refreshToken string) (bool, error)
+	GetUser(ctx context.Context, userId string) (*entity.User, error)
 }
 
 type Handler struct {
@@ -83,7 +84,7 @@ func (h *Handler) RegisterUser(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param request body LoginRequest true "Данные для авторизации"
-// @Success 200 {object} RegisterResponse "Успешная авторизация"
+// @Success 200 {object} LoginResponse "Успешная авторизация"
 // @Failure 400 {object} ErrorResponse "Неверный формат запроса"
 // @Failure 500 {object} ErrorResponse "Неверные учетные данные или ошибка сервера"
 // @Router /login [post]
@@ -168,8 +169,39 @@ func (h *Handler) LogoutUser(c echo.Context) error {
 	return c.JSON(http.StatusOK, LogoutResponse{Message: "User logged out successfully"})
 }
 
+// GetCurrentUser godoc
+// @Summary Получить данные текущего пользователя
+// @Description Возвращает информацию о текущем пользователе на основе аутентификации через токены.
+// @Tags Users
+// @Produce json
+// @Security BearerAuth
+// @Security CookieAuth
+// @Success 200 {object} UserResponse "Данные пользователя успешно получены"
+// @Failure 401 {object} ErrorResponse "Неавторизован или токен истёк"
+// @Failure 500 {object} ErrorResponse "Ошибка сервера"
+// @Router /user/me [get]
 func (h *Handler) GetCurrentUser(c echo.Context) error {
-	return nil
+	ctx := c.Request().Context()
+
+	userId, ok := c.Get("userId").(string)
+	if !ok {
+		h.logger.Warn("No userId found in context")
+		return c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "User not authenticated"})
+	}
+
+	user, err := h.userService.GetUser(ctx, userId)
+	if err != nil {
+		h.logger.Error("Failed to get user data", slog.String("userId", userId), slog.String("error", err.Error()))
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to retrieve user data"})
+	}
+
+	h.logger.Info("User data retrieved successfully", slog.String("userId", userId))
+	return c.JSON(http.StatusOK, UserResponse{
+		UserID:    user.ID.String(),
+		Username:  user.Username,
+		Email:     user.Email,
+		AvatarURL: user.AvatarURL,
+	})
 }
 
 func (h *Handler) GetUserData(c echo.Context) error {
