@@ -1,0 +1,159 @@
+basePath: /
+definitions:
+  httpTransport.ErrorResponse:
+    properties:
+      error:
+        example: Invalid request payload
+        type: string
+    type: object
+  httpTransport.LoginRequest:
+    properties:
+      login_identifier:
+        example: john_doe
+        type: string
+      password:
+        example: password123
+        type: string
+    type: object
+  httpTransport.LogoutResponse:
+    properties:
+      message:
+        example: User logged out successfully
+        type: string
+    type: object
+  httpTransport.RegisterRequest:
+    properties:
+      confirm_password:
+        example: password123
+        type: string
+      consent:
+        example: true
+        type: boolean
+      email:
+        example: john@example.com
+        type: string
+      password:
+        example: password123
+        type: string
+      username:
+        example: john_doe
+        type: string
+    type: object
+  httpTransport.RegisterResponse:
+    properties:
+      access_token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+      message:
+        example: User registered successfully
+        type: string
+      user_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: API для управления пользователями в стриминговой платформе
+  title: User Service API
+  version: "1.0"
+paths:
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Аутентифицирует пользователя по логину и паролю, возвращает идентификатор
+        и access токен. При неверных данных возвращает ошибку.
+      parameters:
+      - description: Данные для авторизации
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/httpTransport.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешная авторизация
+          schema:
+            $ref: '#/definitions/httpTransport.RegisterResponse'
+        "400":
+          description: Неверный формат запроса
+          schema:
+            $ref: '#/definitions/httpTransport.ErrorResponse'
+        "500":
+          description: Неверные учетные данные или ошибка сервера
+          schema:
+            $ref: '#/definitions/httpTransport.ErrorResponse'
+      summary: Авторизация пользователя
+      tags:
+      - auth
+  /logout:
+    post:
+      description: Завершает сессию пользователя, удаляя refresh-токен из cookies.
+        Требует refresh-токен в куках.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешный выход
+          schema:
+            $ref: '#/definitions/httpTransport.LogoutResponse'
+        "401":
+          description: Refresh-токен отсутствует
+          schema:
+            $ref: '#/definitions/httpTransport.ErrorResponse'
+        "500":
+          description: Ошибка сервера
+          schema:
+            $ref: '#/definitions/httpTransport.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Выход пользователя
+      tags:
+      - auth
+  /register:
+    post:
+      consumes:
+      - application/json
+      description: Создаёт нового пользователя и возвращает идентификатор пользователя
+        и токен доступа. Если пользователь с таким email уже существует, возвращает
+        ошибку.
+      parameters:
+      - description: Данные пользователя для регистрации
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/httpTransport.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешная регистрация
+          schema:
+            $ref: '#/definitions/httpTransport.RegisterResponse'
+        "400":
+          description: Неверный формат запроса
+          schema:
+            $ref: '#/definitions/httpTransport.ErrorResponse'
+        "500":
+          description: Ошибка сервера (например, email уже существует)
+          schema:
+            $ref: '#/definitions/httpTransport.ErrorResponse'
+      summary: Регистрация нового пользователя
+      tags:
+      - auth
+securityDefinitions:
+  BearerAuth:
+    description: Bearer token (JWT) для авторизации
+    in: header
+    name: Authorization
+    type: apiKey
+  CookieAuth:
+    description: Refresh-токен в куках для аутентификации
+    in: cookie
+    name: refreshToken
+    type: apiKey
+swagger: "2.0"
