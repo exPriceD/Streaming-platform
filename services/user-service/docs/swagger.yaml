@@ -15,6 +15,18 @@ definitions:
         example: password123
         type: string
     type: object
+  httpTransport.LoginResponse:
+    properties:
+      access_token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+      message:
+        example: User logged in successfully
+        type: string
+      user_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+    type: object
   httpTransport.LogoutResponse:
     properties:
       message:
@@ -51,6 +63,21 @@ definitions:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
     type: object
+  httpTransport.UserResponse:
+    properties:
+      avatar_url:
+        example: https://example.com/avatars/john.jpg
+        type: string
+      email:
+        example: john@example.com
+        type: string
+      user_id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      username:
+        example: john_doe
+        type: string
+    type: object
 host: localhost:8080
 info:
   contact: {}
@@ -58,7 +85,7 @@ info:
   title: User Service API
   version: "1.0"
 paths:
-  /login:
+  /api/v1/auth/login:
     post:
       consumes:
       - application/json
@@ -77,19 +104,23 @@ paths:
         "200":
           description: Успешная авторизация
           schema:
-            $ref: '#/definitions/httpTransport.RegisterResponse'
+            $ref: '#/definitions/httpTransport.LoginResponse'
         "400":
-          description: Неверный формат запроса
+          description: Неверный формат запроса или данные
+          schema:
+            $ref: '#/definitions/httpTransport.ErrorResponse'
+        "401":
+          description: Неверные учетные данные
           schema:
             $ref: '#/definitions/httpTransport.ErrorResponse'
         "500":
-          description: Неверные учетные данные или ошибка сервера
+          description: Ошибка сервера
           schema:
             $ref: '#/definitions/httpTransport.ErrorResponse'
       summary: Авторизация пользователя
       tags:
-      - auth
-  /logout:
+      - Auth
+  /api/v1/auth/logout:
     post:
       description: Завершает сессию пользователя, удаляя refresh-токен из cookies.
         Требует refresh-токен в куках.
@@ -101,7 +132,7 @@ paths:
           schema:
             $ref: '#/definitions/httpTransport.LogoutResponse'
         "401":
-          description: Refresh-токен отсутствует
+          description: Refresh-токен отсутствует или недействителен
           schema:
             $ref: '#/definitions/httpTransport.ErrorResponse'
         "500":
@@ -112,8 +143,8 @@ paths:
       - CookieAuth: []
       summary: Выход пользователя
       tags:
-      - auth
-  /register:
+      - Auth
+  /api/v1/auth/register:
     post:
       consumes:
       - application/json
@@ -135,16 +166,88 @@ paths:
           schema:
             $ref: '#/definitions/httpTransport.RegisterResponse'
         "400":
-          description: Неверный формат запроса
+          description: Неверный формат запроса или данные
+          schema:
+            $ref: '#/definitions/httpTransport.ErrorResponse'
+        "409":
+          description: Пользователь с таким email уже существует
           schema:
             $ref: '#/definitions/httpTransport.ErrorResponse'
         "500":
-          description: Ошибка сервера (например, email уже существует)
+          description: Ошибка сервера
           schema:
             $ref: '#/definitions/httpTransport.ErrorResponse'
       summary: Регистрация нового пользователя
       tags:
-      - auth
+      - Auth
+  /api/v1/users/{userId}:
+    get:
+      description: Возвращает информацию о пользователе по его идентификатору. Доступно
+        только аутентифицированным пользователям.
+      parameters:
+      - description: Идентификатор пользователя
+        in: path
+        name: userId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Данные пользователя успешно получены
+          schema:
+            $ref: '#/definitions/httpTransport.UserResponse'
+        "400":
+          description: Неверный формат userId
+          schema:
+            $ref: '#/definitions/httpTransport.ErrorResponse'
+        "401":
+          description: Неавторизован или токен истёк
+          schema:
+            $ref: '#/definitions/httpTransport.ErrorResponse'
+        "404":
+          description: Пользователь не найден
+          schema:
+            $ref: '#/definitions/httpTransport.ErrorResponse'
+        "500":
+          description: Ошибка сервера
+          schema:
+            $ref: '#/definitions/httpTransport.ErrorResponse'
+      security:
+      - BearerAuth: []
+      - CookieAuth: []
+      summary: Получить данные пользователя по Id
+      tags:
+      - Users
+  /api/v1/users/me:
+    get:
+      description: Возвращает информацию о текущем пользователе на основе аутентификации
+        через токены.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Данные пользователя успешно получены
+          schema:
+            $ref: '#/definitions/httpTransport.UserResponse'
+        "401":
+          description: Неавторизован или токен истёк
+          schema:
+            $ref: '#/definitions/httpTransport.ErrorResponse'
+        "404":
+          description: Пользователь не найден
+          schema:
+            $ref: '#/definitions/httpTransport.ErrorResponse'
+        "500":
+          description: Ошибка сервера
+          schema:
+            $ref: '#/definitions/httpTransport.ErrorResponse'
+      security:
+      - BearerAuth: []
+      - CookieAuth: []
+      summary: Получить данные текущего пользователя
+      tags:
+      - Users
 securityDefinitions:
   BearerAuth:
     description: Bearer token (JWT) для авторизации
