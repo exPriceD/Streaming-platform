@@ -4,19 +4,22 @@ import (
 	"fmt"
 	"github.com/exPriceD/Streaming-platform/pkg/db"
 	"github.com/spf13/viper"
+	"time"
 )
 
 type Config struct {
-	DBConfig db.DBConfig    `mapstructure:"db"`
-	GRPC     GRPCConfig     `mapstructure:"grpc"`
-	HTTP     HTTPConfig     `mapstructure:"http"`
-	CORS     CORSConfig     `mapstructure:"cors"`
-	Services ServicesConfig `mapstructure:"services"`
+	DBConfig        db.DBConfig    `mapstructure:"db"`
+	GRPC            GRPCConfig     `mapstructure:"grpc"`
+	HTTP            HTTPConfig     `mapstructure:"http"`
+	CORS            CORSConfig     `mapstructure:"cors"`
+	Services        ServicesConfig `mapstructure:"services"`
+	ShutdownTimeout time.Duration  `mapstructure:"shutdown_timeout"`
 }
 
 type GRPCConfig struct {
-	Host string `mapstructure:"host"`
-	Port int    `mapstructure:"port"`
+	Host        string        `mapstructure:"host"`
+	Port        int           `mapstructure:"port"`
+	DialTimeout time.Duration `mapstructure:"dial_timeout"`
 }
 
 type HTTPConfig struct {

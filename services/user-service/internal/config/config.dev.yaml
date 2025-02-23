@@ -9,6 +9,7 @@ db:
 grpc:
   host: 0.0.0.0
   port: 50052
+  dial_timeout: 5s
 
 http:
   host: localhost
@@ -16,7 +17,7 @@ http:
 
 cors:
   allow_origins:
-    - "http://localhost:3000"  # Frontend в разработке
+    - "http://localhost:3000"
     - "http://127.0.0.1:3000"
   allow_methods:
     - "GET"
@@ -32,3 +33,5 @@ services:
   auth_service:
     host: localhost
     port: 50051
+
+shutdown_timeout: 5s
