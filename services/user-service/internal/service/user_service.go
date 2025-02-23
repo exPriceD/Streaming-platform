@@ -4,13 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	authProto "github.com/exPriceD/Streaming-platform/pkg/proto/v1/auth"
-	"github.com/exPriceD/Streaming-platform/services/user-service/internal/clients"
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/entity"
 	customErrors "github.com/exPriceD/Streaming-platform/services/user-service/internal/errors"
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/utils"
 	"log/slog"
 )
+
+type AuthClient interface {
+	Authenticate(ctx context.Context, userId string) (string, string, error)
+	ValidateToken(ctx context.Context, accessToken string) (bool, string, error)
+	RefreshToken(ctx context.Context, refreshToken string) (string, string, error)
+	Logout(ctx context.Context, refreshToken string) (bool, error)
+}
 
 type UserRepository interface {
 	CreateUser(ctx context.Context, user *entity.User) error
@@ -20,12 +25,12 @@ type UserRepository interface {
 }
 
 type UserService struct {
-	authClient *clients.AuthClient
+	authClient AuthClient
 	userRepo   UserRepository
 	log        *slog.Logger
 }
 
-func NewUserService(authClient *clients.AuthClient, userRepo UserRepository, logger *slog.Logger) *UserService {
+func NewUserService(authClient AuthClient, userRepo UserRepository, logger *slog.Logger) *UserService {
 	return &UserService{authClient: authClient, userRepo: userRepo, log: logger}
 }
 
@@ -43,12 +48,12 @@ func (s *UserService) RegisterUser(ctx context.Context, username, email, passwor
 		return "", "", "", err
 	}
 
-	resp, err := s.authenticateUser(ctx, user.Id.String())
+	accessToken, refreshToken, err := s.authClient.Authenticate(ctx, user.Id.String())
 	if err != nil {
 		return "", "", "", fmt.Errorf("authentication error: %w", err)
 	}
 
-	return user.Id.String(), resp.AccessToken, resp.RefreshToken, nil
+	return user.Id.String(), accessToken, refreshToken, nil
 }
 
 func (s *UserService) LoginUser(ctx context.Context, loginIdentifier, password string) (string, string, string, error) {
@@ -76,25 +81,12 @@ func (s *UserService) LoginUser(ctx context.Context, loginIdentifier, password s
 		return "", "", "", customErrors.ErrUnauthorized
 	}
 
-	resp, err := s.authenticateUser(ctx, user.Id.String())
+	accessToken, refreshToken, err := s.authClient.Authenticate(ctx, user.Id.String())
 	if err != nil {
-		return "", "", "", fmt.Errorf("authentication error: %w", err)
+		return "", "", "", fmt.Errorf("authentication error: %s", err)
 	}
 
-	return user.Id.String(), resp.AccessToken, resp.RefreshToken, nil
-}
-
-func (s *UserService) authenticateUser(ctx context.Context, userId string) (*authProto.AuthenticateResponse, error) {
-	req := &authProto.AuthenticateRequest{UserId: userId}
-	resp, err := s.authClient.Authenticate(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-	if resp.Error != nil {
-		return nil, fmt.Errorf("authentication failed: %s", resp.Error.Message)
-	}
-
-	return resp, nil
+	return user.Id.String(), accessToken, refreshToken, nil
 }
 
 func (s *UserService) ValidateToken(ctx context.Context, accessToken string) (bool, string, error) {
@@ -102,15 +94,11 @@ func (s *UserService) ValidateToken(ctx context.Context, accessToken string) (bo
 		return false, "", customErrors.ErrInvalidInput
 	}
 
-	resp, err := s.authClient.ValidateToken(ctx, accessToken)
+	valid, userId, err := s.authClient.ValidateToken(ctx, accessToken)
 	if err != nil {
-		return false, "", fmt.Errorf("token validation error: %w", err)
+		return false, "", fmt.Errorf("token validation error: %s", err)
 	}
-	if resp.Error != nil {
-		return false, "", nil
-	}
-
-	return resp.Valid, resp.UserId, nil
+	return valid, userId, nil
 }
 
 func (s *UserService) RefreshToken(ctx context.Context, refreshToken string) (string, string, error) {
@@ -118,15 +106,12 @@ func (s *UserService) RefreshToken(ctx context.Context, refreshToken string) (st
 		return "", "", customErrors.ErrInvalidInput
 	}
 
-	resp, err := s.authClient.RefreshToken(ctx, refreshToken)
+	accessToken, newRefreshToken, err := s.authClient.RefreshToken(ctx, refreshToken)
 	if err != nil {
-		return "", "", fmt.Errorf("refresh token error: %w", err)
-	}
-	if resp.Error != nil {
-		return "", "", fmt.Errorf("refresh token rejected: %s", resp.Error.Message)
+		return "", "", fmt.Errorf("refresh token error: %s", err)
 	}
 
-	return resp.AccessToken, resp.RefreshToken, nil
+	return accessToken, newRefreshToken, nil
 }
 
 func (s *UserService) Logout(ctx context.Context, refreshToken string) (bool, error) {
@@ -134,15 +119,12 @@ func (s *UserService) Logout(ctx context.Context, refreshToken string) (bool, er
 		return false, customErrors.ErrInvalidInput
 	}
 
-	resp, err := s.authClient.Logout(ctx, refreshToken)
+	success, err := s.authClient.Logout(ctx, refreshToken)
 	if err != nil {
 		return false, fmt.Errorf("logout error: %w", err)
 	}
-	if resp.Error != nil {
-		return false, nil
-	}
 
-	return resp.Success, err
+	return success, nil
 }
 
 func (s *UserService) GetUserByID(ctx context.Context, userId string) (*entity.User, error) {
