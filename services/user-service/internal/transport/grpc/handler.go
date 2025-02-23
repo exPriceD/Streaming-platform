@@ -10,7 +10,7 @@ import (
 )
 
 type UserService interface {
-	GetUser(ctx context.Context, userID string) (*entity.User, error)
+	GetUserByID(ctx context.Context, userId string) (*entity.User, error)
 }
 
 type Handler struct {
@@ -27,11 +27,11 @@ func NewHandler(userService UserService, logger *slog.Logger) *Handler {
 }
 
 func (h *Handler) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.GetUserResponse, error) {
-	h.logger.Info("GetUser called", slog.String("user_id", req.UserId))
+	h.logger.Info("GetUser called", slog.String("userId", req.UserId))
 
-	user, err := h.userService.GetUser(ctx, req.UserId)
+	user, err := h.userService.GetUserByID(ctx, req.UserId)
 	if err != nil {
-		h.logger.Error("Failed to get user", slog.String("error", err.Error()), slog.String("user_id", req.UserId))
+		h.logger.Error("Failed to get user", slog.String("error", err.Error()), slog.String("userId", req.UserId))
 		return nil, status.Errorf(codes.NotFound, "user not found: %v", err)
 	}
 
