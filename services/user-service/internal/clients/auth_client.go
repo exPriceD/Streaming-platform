@@ -2,70 +2,104 @@ package clients
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	authpb "github.com/exPriceD/Streaming-platform/pkg/proto/v1/auth"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"log"
+	"time"
 )
 
-type AuthClient struct {
-	client authpb.AuthServiceClient
-	conn   *grpc.ClientConn
+type AuthClientConfig struct {
+	Address     string
+	DialTimeout time.Duration
+	UseTLS      bool
 }
 
-func NewAuthClient(authServiceAddr string) (*AuthClient, error) {
-	conn, err := grpc.NewClient(authServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		log.Printf("Couldn't connect to AuthService: %v", err)
-		return nil, err
+type AuthClient struct {
+	conn   *grpc.ClientConn
+	client authpb.AuthServiceClient
+}
+
+func NewAuthClient(cfg AuthClientConfig, opts ...grpc.DialOption) (*AuthClient, error) {
+	defaultOpts := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
-	client := authpb.NewAuthServiceClient(conn)
+
+	if cfg.UseTLS {
+		// Здесь можно добавить TLS-креденшалы для продакшена
+		// defaultOpts = append(defaultOpts, grpc.WithTransportCredentials(credentials.NewTLS(...)))
+	}
+
+	conn, err := grpc.NewClient(cfg.Address, append(defaultOpts, opts...)...)
+	if err != nil {
+		return nil, fmt.Errorf("dial auth-service at %s: %w", cfg.Address, err)
+	}
+
 	return &AuthClient{
-		client: client,
 		conn:   conn,
+		client: authpb.NewAuthServiceClient(conn),
 	}, nil
 }
 
-// Close закрывает gRPC-соединение
-func (ac *AuthClient) Close() error {
-	if ac.conn != nil {
-		return ac.conn.Close()
-	}
-	return errors.New("connection is already closed or nil")
-}
-
 // Authenticate вызывает gRPC-метод регистрации пользователя
-func (ac *AuthClient) Authenticate(ctx context.Context, req *authpb.AuthenticateRequest) (*authpb.AuthenticateResponse, error) {
-	return ac.client.Authenticate(ctx, req)
+func (c *AuthClient) Authenticate(ctx context.Context, userId string) (string, string, error) {
+	resp, err := c.client.Authenticate(ctx, &authpb.AuthenticateRequest{UserId: userId})
+	if err != nil {
+		return "", "", fmt.Errorf("authenticate: %w", err)
+	}
+	if resp.Error != nil {
+		return "", "", fmt.Errorf("authenticate failed: %s", resp.Error.Message)
+	}
+
+	return resp.AccessToken, resp.RefreshToken, nil
 }
 
 // ValidateToken вызывает gRPC-метод проверки токена
-func (ac *AuthClient) ValidateToken(ctx context.Context, token string) (*authpb.ValidateTokenResponse, error) {
-	req := &authpb.ValidateTokenRequest{AccessToken: token}
-	resp, err := ac.client.ValidateToken(ctx, req)
+func (c *AuthClient) ValidateToken(ctx context.Context, accessToken string) (bool, string, error) {
+	resp, err := c.client.ValidateToken(ctx, &authpb.ValidateTokenRequest{AccessToken: accessToken})
 	if err != nil {
-		log.Printf("ValidateToken error: %v", err)
+		return false, "", fmt.Errorf("validate token: %w", err)
 	}
-	return resp, err
+	if resp.Error != nil {
+		return false, "", nil
+	}
+
+	return resp.Valid, resp.UserId, nil
 }
 
 // RefreshToken вызывает gRPC-метод обновления токена
-func (ac *AuthClient) RefreshToken(ctx context.Context, refreshToken string) (*authpb.RefreshTokenResponse, error) {
-	req := &authpb.RefreshTokenRequest{RefreshToken: refreshToken}
-	resp, err := ac.client.RefreshToken(ctx, req)
+func (c *AuthClient) RefreshToken(ctx context.Context, refreshToken string) (string, string, error) {
+	resp, err := c.client.RefreshToken(ctx, &authpb.RefreshTokenRequest{RefreshToken: refreshToken})
 	if err != nil {
-		log.Printf("RefreshToken error: %v", err)
+		return "", "", fmt.Errorf("refresh token: %w", err)
 	}
-	return resp, err
+	if resp.Error != nil {
+		return "", "", fmt.Errorf("refresh token failed: %s", resp.Error.Message)
+	}
+
+	return resp.AccessToken, resp.RefreshToken, nil
 }
 
 // Logout вызывает gRPC-метод выхода из системы
-func (ac *AuthClient) Logout(ctx context.Context, refreshToken string) (*authpb.LogoutResponse, error) {
-	req := &authpb.LogoutRequest{RefreshToken: refreshToken}
-	resp, err := ac.client.Logout(ctx, req)
+func (c *AuthClient) Logout(ctx context.Context, refreshToken string) (bool, error) {
+	resp, err := c.client.Logout(ctx, &authpb.LogoutRequest{RefreshToken: refreshToken})
 	if err != nil {
-		log.Printf("Logout error: %v", err)
+		return false, fmt.Errorf("logout: %w", err)
 	}
-	return resp, err
+	if resp.Error != nil {
+		return false, nil
+	}
+
+	return resp.Success, nil
+}
+
+// Close закрывает gRPC-соединение
+func (c *AuthClient) Close() error {
+	if c.conn == nil {
+		return nil
+	}
+	err := c.conn.Close()
+	c.conn = nil
+
+	return err
 }
