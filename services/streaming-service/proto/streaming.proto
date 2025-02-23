@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package proto;
+option go_package = "github.com/exPriceD/Streaming-platform/services/streaming-service/proto";
+
+import "google/protobuf/timestamp.proto";
+
+service StreamingService {
+  rpc StartStream(StartStreamRequest) returns (StreamResponse);
+  rpc StopStream(StopStreamRequest) returns (StreamResponse);
+  rpc GetStream(GetStreamRequest) returns (StreamResponse);
+}
+
+message StartStreamRequest {
+  string user_id = 1;
+  string title = 2;
+  string description = 3;
+}
+
+message StopStreamRequest {
+  string stream_id = 1;
+}
+
+message GetStreamRequest {
+  string stream_id = 1;
+}
+
+message StreamResponse {
+  string id = 1;
+  string user_id = 2;
+  string title = 3;
+  string description = 4;
+  string status = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
