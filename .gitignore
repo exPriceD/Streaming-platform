@@ -27,3 +27,10 @@ tmp/
 
 # Project build
 main
+
+# Logs
+requests.log
+user-service.log
+user-service.json
+auth-service.log
+auth-service.json
