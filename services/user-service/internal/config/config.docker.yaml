@@ -1,0 +1,20 @@
+db:
+  host: db
+  port: 5432
+  user: postgres
+  password: superuser
+  name: user_db
+  ssl_mode: disable
+
+grpc:
+  host: 0.0.0.0
+  port: 50052
+
+http:
+  host: localhost
+  port: 8080
+
+services:
+  auth_service:
+    host: 0.0.0.0
+    port: 50051
