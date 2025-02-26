@@ -1,0 +1,110 @@
+version: "3.9"
+
+services:
+  auth-service:
+    build:
+      context: .
+      dockerfile: services/auth-service/Dockerfile
+      target: final
+    image: auth-service:latest
+    container_name: auth-service
+    ports:
+      - "50051:50051"
+    environment:
+      - DB_HOST=auth_db
+    volumes:
+      - ./services/auth-service/internal/config/config.docker.yaml:/config/config.docker.yaml
+    depends_on:
+      auth_db:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "grpc_health_probe", "-addr=:50051" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - app-network
+
+  user-service:
+    build:
+      context: .
+      dockerfile: services/user-service/Dockerfile
+      target: final
+    image: user-service:latest
+    container_name: user-service
+    ports:
+      - "8080:8080"
+      - "50052:50052"
+    environment:
+      - DB_HOST=user_db
+    volumes:
+      - ./services/user-service/internal/config/config.docker.yaml:/config/config.docker.yaml
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      user_db:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "grpc_health_probe", "-addr=:50052" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - app-network
+
+  auth_db:
+    image: postgres:15
+    container_name: auth-db
+    environment:
+      - POSTGRES_USER=auth_user
+      - POSTGRES_PASSWORD=auth_password
+      - POSTGRES_DB=auth_database
+    ports:
+      - "5432:5432"
+    volumes:
+      - auth-db-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U auth_user -d auth_db" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - app-network
+
+  user_db:
+    image: postgres:15
+    container_name: user-db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=superuser
+      - POSTGRES_DB=user_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - user-db-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d user_db" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+    name: streaming-platform-network
+
+volumes:
+  auth-db-data:
+    name: auth-db-data
+  user-db-data:
+    name: user-db-data

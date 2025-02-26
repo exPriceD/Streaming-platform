@@ -1,0 +1,20 @@
+db:
+  host:
+  port:
+  user:
+  password:
+  name:
+  ssl_mode:
+
+grpc:
+  host:
+  port:
+
+http:
+  host:
+  port:
+
+services:
+  auth_service:
+    host:
+    port:
