@@ -1,9 +1,9 @@
 db:
-  host: db
+  host: auth_db
   port: 5432
   user: auth_user
   password: auth_password
-  name: auth_db
+  name: auth_database
   ssl_mode: disable
 
 jwt:
