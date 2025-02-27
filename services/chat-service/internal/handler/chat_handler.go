@@ -23,13 +23,13 @@ func NewChatHandler(chatService *service.ChatService) *ChatHandler {
 func (h *ChatHandler) GetMessages(w http.ResponseWriter, r *http.Request) {
 	streamID, err := uuid.Parse(r.URL.Query().Get("stream_id"))
 	if err != nil {
-		http.Error(w, "Некорректный stream_id", http.StatusBadRequest)
+		http.Error(w, "Invalid steam_id", http.StatusBadRequest)
 		return
 	}
 
 	messages, err := h.chatService.GetMessages(context.Background(), streamID, 20)
 	if err != nil {
-		http.Error(w, "Ошибка получения сообщений", http.StatusInternalServerError)
+		http.Error(w, "Error receiving messages", http.StatusInternalServerError)
 		return
 	}
 
