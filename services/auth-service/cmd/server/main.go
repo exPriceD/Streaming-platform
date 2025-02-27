@@ -1,66 +1,99 @@
 package main
 
 import (
-	"database/sql"
+	"context"
+	"flag"
 	"fmt"
-	"github.com/exPriceD/Streaming-platform/config"
 	"github.com/exPriceD/Streaming-platform/pkg/db"
-	"github.com/exPriceD/Streaming-platform/pkg/logger"
-	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/handler"
+	logging "github.com/exPriceD/Streaming-platform/pkg/logger"
+	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/config"
 	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/repository"
 	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/service"
 	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/token"
-	pb "github.com/exPriceD/Streaming-platform/services/auth-service/proto"
-	"google.golang.org/grpc"
+	"github.com/exPriceD/Streaming-platform/services/auth-service/internal/transport/grpc"
 	"log/slog"
-	"net"
+	"os"
+	"os/signal"
+	"sync"
+	"syscall"
+	"time"
 )
 
 var (
-	network = "tcp"
+	network         = "tcp"
+	shutdownTimeout = 5 * time.Second
 )
 
 func main() {
-	log := logger.InitLogger("auth-service")
+	logger := logging.InitLogger("auth-service")
 
-	cfg, err := config.LoadAuthConfig()
+	configPath := flag.String("config", "dev", "path to config file or environment name (e.g., 'dev', 'prod', '/path/to/config.yaml')")
+	flag.Parse()
+
+	cfg, err := config.LoadConfig(*configPath) // dev, prod, test, docker
 	if err != nil {
-		log.Error("❌ Couldn't load the configuration", slog.String("error", err.Error()))
+		logger.Error("❌ Couldn't load the configuration", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
-	log.Info("✅ Configuration loaded successfully")
+	logger.Info("✅ Configuration loaded successfully")
 
 	database, err := db.NewPostgresConnection(cfg.DB)
 	if err != nil {
-		log.Error("❌ Database connection error", slog.String("error", err.Error()))
-		return
+		logger.Error("❌ Database connection error", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
-	defer func(database *sql.DB) {
-		err := database.Close()
-		if err != nil {
-			log.Error("Couldn't close the database", slog.String("error", err.Error()))
+	logger.Info("✅ Database connection established")
+
+	tokenRepo := repository.NewTokenRepository(database)
+	jwtManager := token.NewJWTManager(cfg.JWT, logger)
+	logger.Info("🔧 Repositories are initialized")
+
+	authService := service.NewAuthService(tokenRepo, jwtManager, logger)
+	logger.Info("🔧 Services are initialized")
+
+	grpcHandler := grpcTransport.NewAuthHandler(authService, logger)
+	logger.Info("🔧 GRPC handlers are initialized")
+
+	grpcServer := grpcTransport.NewGRPCServer(grpcHandler, logger)
+	logger.Info("🔧 gRPC Server is initialized")
+
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+		defer func() {
+			if r := recover(); r != nil {
+				logger.Error("Panic in gRPC server", slog.Any("panic", r))
+			}
+		}()
+		grpcAddr := fmt.Sprintf("%s:%d", cfg.GRPC.Host, cfg.GRPC.Port)
+		if err := grpcServer.Run(grpcAddr); err != nil {
+			logger.Error("❌ gRPC Server error", slog.String("error", err.Error()))
 		} else {
-			log.Info("✅ The database connection is closed")
+			logger.Info("🚀 Auth-service is running", slog.String("network", network), slog.String("address", grpcAddr))
 		}
-	}(database)
+	}()
 
-	tokenRepo := repository.NewTokenRepository(database, log)
-	jwtManager := token.NewJWTManager(cfg.JWT, log)
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	<-sigChan
 
-	authService := service.NewAuthService(tokenRepo, jwtManager, log)
+	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancel()
 
-	log.Info("🔧 Repositories and services are initialized")
-
-	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
-	lis, err := net.Listen(network, addr)
-	if err != nil {
-		log.Error("❌ Couldn't start the server", slog.String("error", err.Error()))
+	if err := grpcServer.Shutdown(ctx); err != nil {
+		logger.Error("Failed to shutdown gRPC server", slog.String("error", err.Error()))
 	}
 
-	grpcServer := grpc.NewServer()
-	pb.RegisterAuthServiceServer(grpcServer, handler.NewAuthHandler(authService, log))
+	wg.Wait()
 
-	log.Info("🚀 Auth-service is running", slog.String("network", network), slog.String("address", addr))
-	if err := grpcServer.Serve(lis); err != nil {
-		log.Error("❌ Server error", slog.String("error", err.Error()))
+	if err := database.Close(); err != nil {
+		logger.Error("Couldn't close the database", slog.String("error", err.Error()))
+	} else {
+		logger.Info("✅ The database connection is closed")
 	}
+
+	logger.Info("Server shut down gracefully")
 }

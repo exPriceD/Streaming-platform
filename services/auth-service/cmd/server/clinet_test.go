@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	pb "github.com/exPriceD/Streaming-platform/services/auth-service/proto"
+	"github.com/exPriceD/Streaming-platform/pkg/proto/v1/auth"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -15,7 +15,7 @@ const authServiceAddr = "localhost:50051"
 
 func TestClient(t *testing.T) {
 	// Подключаемся к gRPC-серверу
-	conn, err := grpc.NewClient("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(authServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("Ошибка подключения: %v", err)
 	}
@@ -26,14 +26,14 @@ func TestClient(t *testing.T) {
 		}
 	}(conn)
 
-	client := pb.NewAuthServiceClient(conn)
+	client := auth.NewAuthServiceClient(conn)
 
 	// 🔹 Шаг 1: Генерация токенов
 	fmt.Println("\n🔹 Генерация токенов")
 
 	userID := "550e8400-e29b-41d4-a716-446655440000"
-	generateReq := &pb.AuthenticateRequest{UserId: userID}
-	generateResp, err := runTestCase(t, "GenerateTokens", func() (*pb.AuthenticateResponse, error) {
+	generateReq := &auth.AuthenticateRequest{UserId: userID}
+	generateResp, err := runTestCase(t, "GenerateTokens", func() (*auth.AuthenticateResponse, error) {
 		return client.Authenticate(context.Background(), generateReq)
 	})
 
@@ -43,9 +43,9 @@ func TestClient(t *testing.T) {
 
 	// 🔹 Шаг 2: Валидация access_token
 	fmt.Println("\n🔹 Валидация access_token")
-	validateReq := &pb.ValidateTokenRequest{AccessToken: generateResp.AccessToken}
+	validateReq := &auth.ValidateTokenRequest{AccessToken: generateResp.AccessToken}
 
-	validateResp, err := runTestCase(t, "ValidateToken", func() (*pb.ValidateTokenResponse, error) {
+	validateResp, err := runTestCase(t, "ValidateToken", func() (*auth.ValidateTokenResponse, error) {
 		return client.ValidateToken(context.Background(), validateReq)
 	})
 	assert.NoError(t, err)
@@ -54,9 +54,9 @@ func TestClient(t *testing.T) {
 
 	// 🔹 Шаг 3: Обновление токенов
 	fmt.Println("\n🔹 Обновление access_token")
-	refreshReq := &pb.RefreshTokenRequest{RefreshToken: generateResp.RefreshToken}
+	refreshReq := &auth.RefreshTokenRequest{RefreshToken: generateResp.RefreshToken}
 
-	refreshResp, err := runTestCase(t, "RefreshToken", func() (*pb.RefreshTokenResponse, error) {
+	refreshResp, err := runTestCase(t, "RefreshToken", func() (*auth.RefreshTokenResponse, error) {
 		return client.RefreshToken(context.Background(), refreshReq)
 	})
 	assert.NoError(t, err)
@@ -65,9 +65,9 @@ func TestClient(t *testing.T) {
 
 	// 🔹 Шаг 4: Выход (Logout)
 	fmt.Println("\n🔹 Logout")
-	logoutReq := &pb.LogoutRequest{RefreshToken: generateResp.RefreshToken}
+	logoutReq := &auth.LogoutRequest{RefreshToken: generateResp.RefreshToken}
 
-	_, err = runTestCase(t, "Logout", func() (*pb.LogoutResponse, error) {
+	_, err = runTestCase(t, "Logout", func() (*auth.LogoutResponse, error) {
 		return client.Logout(context.Background(), logoutReq)
 	})
 	assert.NoError(t, err)

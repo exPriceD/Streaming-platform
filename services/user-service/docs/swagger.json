@@ -1,0 +1,388 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "API для управления пользователями в стриминговой платформе",
+        "title": "User Service API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/",
+    "paths": {
+        "/api/v1/auth/login": {
+            "post": {
+                "description": "Аутентифицирует пользователя по логину и паролю, возвращает идентификатор и access токен. При неверных данных возвращает ошибку.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Авторизация пользователя",
+                "parameters": [
+                    {
+                        "description": "Данные для авторизации",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/httpTransport.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Успешная авторизация",
+                        "schema": {
+                            "$ref": "#/definitions/httpTransport.LoginResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверный формат запроса или данные",
+                        "schema": {
+                            "$ref": "#/definitions/httpTransport.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Неверные учетные данные",
+                        "schema": {
+                            "$ref": "#/definitions/httpTransport.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/httpTransport.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/logout": {
+            "post": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Завершает сессию пользователя, удаляя refresh-токен из cookies. Требует refresh-токен в куках.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Выход пользователя",
+                "responses": {
+                    "200": {
+                        "description": "Успешный выход",
+                        "schema": {
+                            "$ref": "#/definitions/httpTransport.LogoutResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Refresh-токен отсутствует или недействителен",
+                        "schema": {
+                            "$ref": "#/definitions/httpTransport.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/httpTransport.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/register": {
+            "post": {
+                "description": "Создаёт нового пользователя и возвращает идентификатор пользователя и токен доступа. Если пользователь с таким email уже существует, возвращает ошибку.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Регистрация нового пользователя",
+                "parameters": [
+                    {
+                        "description": "Данные пользователя для регистрации",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/httpTransport.RegisterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Успешная регистрация",
+                        "schema": {
+                            "$ref": "#/definitions/httpTransport.RegisterResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверный формат запроса или данные",
+                        "schema": {
+                            "$ref": "#/definitions/httpTransport.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Пользователь с таким email уже существует",
+                        "schema": {
+                            "$ref": "#/definitions/httpTransport.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/httpTransport.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/users/me": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Возвращает информацию о текущем пользователе на основе аутентификации через токены.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Получить данные текущего пользователя",
+                "responses": {
+                    "200": {
+                        "description": "Данные пользователя успешно получены",
+                        "schema": {
+                            "$ref": "#/definitions/httpTransport.UserResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Неавторизован или токен истёк",
+                        "schema": {
+                            "$ref": "#/definitions/httpTransport.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Пользователь не найден",
+                        "schema": {
+                            "$ref": "#/definitions/httpTransport.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/httpTransport.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/users/{userId}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Возвращает информацию о пользователе по его идентификатору. Доступно только аутентифицированным пользователям.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Получить данные пользователя по Id",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Идентификатор пользователя",
+                        "name": "userId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Данные пользователя успешно получены",
+                        "schema": {
+                            "$ref": "#/definitions/httpTransport.UserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверный формат userId",
+                        "schema": {
+                            "$ref": "#/definitions/httpTransport.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Неавторизован или токен истёк",
+                        "schema": {
+                            "$ref": "#/definitions/httpTransport.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Пользователь не найден",
+                        "schema": {
+                            "$ref": "#/definitions/httpTransport.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/httpTransport.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "httpTransport.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "Invalid request payload"
+                }
+            }
+        },
+        "httpTransport.LoginRequest": {
+            "type": "object",
+            "properties": {
+                "login_identifier": {
+                    "type": "string",
+                    "example": "john_doe"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "password123"
+                }
+            }
+        },
+        "httpTransport.LoginResponse": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                },
+                "message": {
+                    "type": "string",
+                    "example": "User logged in successfully"
+                },
+                "user_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                }
+            }
+        },
+        "httpTransport.LogoutResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "User logged out successfully"
+                }
+            }
+        },
+        "httpTransport.RegisterRequest": {
+            "type": "object",
+            "properties": {
+                "confirm_password": {
+                    "type": "string",
+                    "example": "password123"
+                },
+                "consent": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "email": {
+                    "type": "string",
+                    "example": "john@example.com"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "password123"
+                },
+                "username": {
+                    "type": "string",
+                    "example": "john_doe"
+                }
+            }
+        },
+        "httpTransport.RegisterResponse": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                },
+                "message": {
+                    "type": "string",
+                    "example": "User registered successfully"
+                },
+                "user_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                }
+            }
+        },
+        "httpTransport.UserResponse": {
+            "type": "object",
+            "properties": {
+                "avatar_url": {
+                    "type": "string",
+                    "example": "https://example.com/avatars/john.jpg"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "john@example.com"
+                },
+                "user_id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "username": {
+                    "type": "string",
+                    "example": "john_doe"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "Bearer token (JWT) для авторизации",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        },
+        "CookieAuth": {
+            "description": "Refresh-токен в куках для аутентификации",
+            "type": "apiKey",
+            "name": "refreshToken",
+            "in": "cookie"
+        }
+    }
+}

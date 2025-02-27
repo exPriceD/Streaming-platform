@@ -19,9 +19,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	StreamingService_StartStream_FullMethodName = "/proto.StreamingService/StartStream"
-	StreamingService_StopStream_FullMethodName  = "/proto.StreamingService/StopStream"
-	StreamingService_GetStream_FullMethodName   = "/proto.StreamingService/GetStream"
+	StreamingService_StartStream_FullMethodName         = "/proto.StreamingService/StartStream"
+	StreamingService_StopStream_FullMethodName          = "/proto.StreamingService/StopStream"
+	StreamingService_GetStream_FullMethodName           = "/proto.StreamingService/GetStream"
+	StreamingService_GenerateStreamKey_FullMethodName   = "/proto.StreamingService/GenerateStreamKey"
+	StreamingService_GetStreamKey_FullMethodName        = "/proto.StreamingService/GetStreamKey"
+	StreamingService_RegenerateStreamKey_FullMethodName = "/proto.StreamingService/RegenerateStreamKey"
 )
 
 // StreamingServiceClient is the client API for StreamingService service.
@@ -31,6 +34,12 @@ type StreamingServiceClient interface {
 	StartStream(ctx context.Context, in *StartStreamRequest, opts ...grpc.CallOption) (*StreamResponse, error)
 	StopStream(ctx context.Context, in *StopStreamRequest, opts ...grpc.CallOption) (*StreamResponse, error)
 	GetStream(ctx context.Context, in *GetStreamRequest, opts ...grpc.CallOption) (*StreamResponse, error)
+	// Генерация stream-key для нового пользователя
+	GenerateStreamKey(ctx context.Context, in *GenerateStreamKeyRequest, opts ...grpc.CallOption) (*GenerateStreamKeyResponse, error)
+	// Получение stream-key по user_id
+	GetStreamKey(ctx context.Context, in *GetStreamKeyRequest, opts ...grpc.CallOption) (*GetStreamKeyResponse, error)
+	// Перегенерация stream-key по user_id
+	RegenerateStreamKey(ctx context.Context, in *RegenerateStreamKeyRequest, opts ...grpc.CallOption) (*RegenerateStreamKeyResponse, error)
 }
 
 type streamingServiceClient struct {
@@ -71,6 +80,36 @@ func (c *streamingServiceClient) GetStream(ctx context.Context, in *GetStreamReq
 	return out, nil
 }
 
+func (c *streamingServiceClient) GenerateStreamKey(ctx context.Context, in *GenerateStreamKeyRequest, opts ...grpc.CallOption) (*GenerateStreamKeyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GenerateStreamKeyResponse)
+	err := c.cc.Invoke(ctx, StreamingService_GenerateStreamKey_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *streamingServiceClient) GetStreamKey(ctx context.Context, in *GetStreamKeyRequest, opts ...grpc.CallOption) (*GetStreamKeyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetStreamKeyResponse)
+	err := c.cc.Invoke(ctx, StreamingService_GetStreamKey_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *streamingServiceClient) RegenerateStreamKey(ctx context.Context, in *RegenerateStreamKeyRequest, opts ...grpc.CallOption) (*RegenerateStreamKeyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RegenerateStreamKeyResponse)
+	err := c.cc.Invoke(ctx, StreamingService_RegenerateStreamKey_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // StreamingServiceServer is the server API for StreamingService service.
 // All implementations must embed UnimplementedStreamingServiceServer
 // for forward compatibility.
@@ -78,6 +117,12 @@ type StreamingServiceServer interface {
 	StartStream(context.Context, *StartStreamRequest) (*StreamResponse, error)
 	StopStream(context.Context, *StopStreamRequest) (*StreamResponse, error)
 	GetStream(context.Context, *GetStreamRequest) (*StreamResponse, error)
+	// Генерация stream-key для нового пользователя
+	GenerateStreamKey(context.Context, *GenerateStreamKeyRequest) (*GenerateStreamKeyResponse, error)
+	// Получение stream-key по user_id
+	GetStreamKey(context.Context, *GetStreamKeyRequest) (*GetStreamKeyResponse, error)
+	// Перегенерация stream-key по user_id
+	RegenerateStreamKey(context.Context, *RegenerateStreamKeyRequest) (*RegenerateStreamKeyResponse, error)
 	mustEmbedUnimplementedStreamingServiceServer()
 }
 
@@ -96,6 +141,15 @@ func (UnimplementedStreamingServiceServer) StopStream(context.Context, *StopStre
 }
 func (UnimplementedStreamingServiceServer) GetStream(context.Context, *GetStreamRequest) (*StreamResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetStream not implemented")
+}
+func (UnimplementedStreamingServiceServer) GenerateStreamKey(context.Context, *GenerateStreamKeyRequest) (*GenerateStreamKeyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GenerateStreamKey not implemented")
+}
+func (UnimplementedStreamingServiceServer) GetStreamKey(context.Context, *GetStreamKeyRequest) (*GetStreamKeyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetStreamKey not implemented")
+}
+func (UnimplementedStreamingServiceServer) RegenerateStreamKey(context.Context, *RegenerateStreamKeyRequest) (*RegenerateStreamKeyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RegenerateStreamKey not implemented")
 }
 func (UnimplementedStreamingServiceServer) mustEmbedUnimplementedStreamingServiceServer() {}
 func (UnimplementedStreamingServiceServer) testEmbeddedByValue()                          {}
@@ -172,6 +226,60 @@ func _StreamingService_GetStream_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _StreamingService_GenerateStreamKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GenerateStreamKeyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StreamingServiceServer).GenerateStreamKey(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: StreamingService_GenerateStreamKey_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StreamingServiceServer).GenerateStreamKey(ctx, req.(*GenerateStreamKeyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _StreamingService_GetStreamKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetStreamKeyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StreamingServiceServer).GetStreamKey(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: StreamingService_GetStreamKey_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StreamingServiceServer).GetStreamKey(ctx, req.(*GetStreamKeyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _StreamingService_RegenerateStreamKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RegenerateStreamKeyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StreamingServiceServer).RegenerateStreamKey(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: StreamingService_RegenerateStreamKey_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StreamingServiceServer).RegenerateStreamKey(ctx, req.(*RegenerateStreamKeyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // StreamingService_ServiceDesc is the grpc.ServiceDesc for StreamingService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -190,6 +298,18 @@ var StreamingService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetStream",
 			Handler:    _StreamingService_GetStream_Handler,
+		},
+		{
+			MethodName: "GenerateStreamKey",
+			Handler:    _StreamingService_GenerateStreamKey_Handler,
+		},
+		{
+			MethodName: "GetStreamKey",
+			Handler:    _StreamingService_GetStreamKey_Handler,
+		},
+		{
+			MethodName: "RegenerateStreamKey",
+			Handler:    _StreamingService_RegenerateStreamKey_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
