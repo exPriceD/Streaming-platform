@@ -25,3 +25,27 @@ streaming_service:
   server:
     host: 0.0.0.0
     port: 8080
+
+chat_service:
+  db:
+    host: localhost
+    port: 5432
+    user: chat_user
+    password: chat_password
+    name: chat_db
+    ssl_mode: disable
+  server:
+    host: 0.0.0.0
+    port: 50052
+  websocket:
+    jwt_secret: super_secret_key
+    rate_limit: 20 # сообщений в минуту
+    write_timeout: 5 # секунд
+  mongo:
+    uri: "mongodb://localhost:27017"
+    database: "chat_db"
+  redis:
+    host: localhost
+    port: 6379
+    password: ""
+    db: 0
