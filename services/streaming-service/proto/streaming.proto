@@ -1,0 +1,86 @@
+syntax = "proto3";
+
+package proto;
+option go_package = "github.com/exPriceD/Streaming-platform/services/streaming-service/proto";
+
+import "google/protobuf/timestamp.proto";
+
+service StreamingService {
+  rpc StartStream(StartStreamRequest) returns (StreamResponse);
+  rpc StopStream(StopStreamRequest) returns (StreamResponse);
+  rpc GetStream(GetStreamRequest) returns (StreamResponse);
+
+  // Генерация stream-key для нового пользователя
+  rpc GenerateStreamKey(GenerateStreamKeyRequest) returns (GenerateStreamKeyResponse);
+
+  // Получение stream-key по user_id
+  rpc GetStreamKey(GetStreamKeyRequest) returns (GetStreamKeyResponse);
+
+  // Перегенерация stream-key по user_id
+  rpc RegenerateStreamKey(RegenerateStreamKeyRequest) returns (RegenerateStreamKeyResponse);
+}
+
+// Запрос на запуск стрима
+message StartStreamRequest {
+  string user_id = 1;
+  string title = 2;
+  string description = 3;
+}
+
+// Запрос на остановку стрима
+message StopStreamRequest {
+  string stream_id = 1;
+}
+
+// Запрос на получение информации о стриме
+message GetStreamRequest {
+  string stream_id = 1;
+}
+
+// Ответ со стримом
+message StreamResponse {
+  string id = 1;
+  string user_id = 2;
+  string title = 3;
+  string description = 4;
+  string status = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+// Запрос на генерацию stream-key
+message GenerateStreamKeyRequest {
+  string user_id = 1;
+  string accessToken = 2;  // Токен для авторизации
+}
+
+// Ответ с генерацией stream-key
+message GenerateStreamKeyResponse {
+  string user_id = 1;
+  string stream_key = 2;
+}
+
+// Запрос на получение stream-key
+message GetStreamKeyRequest {
+  string user_id = 1;
+  string accessToken = 2;
+}
+
+// Ответ с получением stream-key
+message GetStreamKeyResponse {
+  string user_id = 1;
+  string stream_key = 2;
+  bool exists = 3;  // Существует ли stream-key
+}
+
+// Запрос на перегенерацию stream-key
+message RegenerateStreamKeyRequest {
+  string user_id = 1;
+  string accessToken = 2;
+}
+
+// Ответ для перегенерации stream-key
+message RegenerateStreamKeyResponse {
+  string user_id = 1;
+  string stream_key = 2;
+}
