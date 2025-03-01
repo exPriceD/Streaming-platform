@@ -5,9 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/exPriceD/Streaming-platform/services/user-service/internal/entity"
+	"github.com/exPriceD/Streaming-platform/services/user-service/internal/dto"
 	customErrors "github.com/exPriceD/Streaming-platform/services/user-service/internal/errors"
-	"github.com/exPriceD/Streaming-platform/services/user-service/internal/model"
 	"github.com/lib/pq"
 	"time"
 )
@@ -43,7 +42,7 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 
-func (r *UserRepository) CreateUser(ctx context.Context, user *entity.User) error {
+func (r *UserRepository) CreateUser(ctx context.Context, user *dto.User) error {
 	now := time.Now()
 
 	_, err := r.db.ExecContext(ctx, queryCreateUser,
@@ -62,9 +61,9 @@ func (r *UserRepository) CreateUser(ctx context.Context, user *entity.User) erro
 	return nil
 }
 
-func (r *UserRepository) getUserByField(ctx context.Context, field, value string) (*entity.User, error) {
+func (r *UserRepository) getUserByField(ctx context.Context, field, value string) (*dto.User, error) {
 	query := fmt.Sprintf(queryGetUserByField, field)
-	var user model.User
+	var user dto.User
 
 	err := r.db.QueryRowContext(ctx, query, value).Scan(
 		&user.Id, &user.Username, &user.Email, &user.PasswordHash, &user.AvatarURL,
@@ -79,19 +78,18 @@ func (r *UserRepository) getUserByField(ctx context.Context, field, value string
 		return nil, fmt.Errorf("get user by %s: %w", field, err)
 	}
 
-	mappedUser := mapModelToEntity(&user)
-	return mappedUser, nil
+	return &user, nil
 }
 
-func (r *UserRepository) GetUserByEmail(ctx context.Context, email string) (*entity.User, error) {
+func (r *UserRepository) GetUserByEmail(ctx context.Context, email string) (*dto.User, error) {
 	return r.getUserByField(ctx, "email", email)
 }
 
-func (r *UserRepository) GetUserByUsername(ctx context.Context, username string) (*entity.User, error) {
+func (r *UserRepository) GetUserByUsername(ctx context.Context, username string) (*dto.User, error) {
 	return r.getUserByField(ctx, "username", username)
 }
 
-func (r *UserRepository) UpdateUser(ctx context.Context, user *entity.User) (*entity.User, error) {
+func (r *UserRepository) UpdateUser(ctx context.Context, user *dto.User) (*dto.User, error) {
 	now := time.Now()
 
 	err := r.db.QueryRowContext(ctx, queryUpdateUser,
@@ -111,8 +109,8 @@ func (r *UserRepository) UpdateUser(ctx context.Context, user *entity.User) (*en
 	return user, nil
 }
 
-func (r *UserRepository) GetUserByID(ctx context.Context, userId string) (*entity.User, error) {
-	var user model.User
+func (r *UserRepository) GetUserByID(ctx context.Context, userId string) (*dto.User, error) {
+	var user dto.User
 
 	err := r.db.QueryRowContext(ctx, queryGetUserByID, userId).Scan(
 		&user.Id, &user.Username, &user.Email, &user.AvatarURL,
@@ -126,20 +124,5 @@ func (r *UserRepository) GetUserByID(ctx context.Context, userId string) (*entit
 		return nil, fmt.Errorf("get user by Id: %w", err)
 	}
 
-	mappedUser := mapModelToEntity(&user)
-
-	return mappedUser, nil
-}
-
-func mapModelToEntity(user *model.User) *entity.User {
-	return &entity.User{
-		Id:                      user.Id,
-		Username:                user.Username,
-		Email:                   user.Email,
-		PasswordHash:            user.PasswordHash,
-		AvatarURL:               user.AvatarURL,
-		ConsentToDataProcessing: user.ConsentToDataProcessing,
-		CreatedAt:               user.CreatedAt,
-		UpdatedAt:               user.UpdatedAt,
-	}
+	return &user, nil
 }
