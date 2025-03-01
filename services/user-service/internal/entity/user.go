@@ -1,7 +1,6 @@
 package entity
 
 import (
-	"errors"
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/utils"
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/validation"
 	"github.com/google/uuid"
@@ -10,65 +9,92 @@ import (
 )
 
 type User struct {
-	Id                      uuid.UUID
-	Username                string
-	Email                   string
-	PasswordHash            string
-	AvatarURL               string
-	ConsentToDataProcessing bool
-	CreatedAt               time.Time
-	UpdatedAt               time.Time
+	id                      uuid.UUID
+	username                string
+	email                   string
+	passwordHash            string
+	avatarURL               string
+	consentToDataProcessing bool
+	createdAt               time.Time
+	updatedAt               time.Time
 }
 
-func (u *User) CheckPassword(password string) bool {
-	return bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password)) == nil
+type Config struct {
+	BcryptCost           int
+	DefaultAvatar        string
+	IDGenerator          func() uuid.UUID
+	TimeNow              func() time.Time
+	SelectRandomAvatarFn func() (string, error)
 }
 
-func NewUser(username, email, password, confirmPassword string, consent bool) (*User, error) {
+func DefaultConfig() Config {
+	return Config{
+		BcryptCost:           bcrypt.DefaultCost,
+		DefaultAvatar:        "person-1.png",
+		IDGenerator:          uuid.New,
+		TimeNow:              time.Now,
+		SelectRandomAvatarFn: utils.SelectRandomAvatar,
+	}
+}
+
+func NewUser(username, email, password, confirmPassword string, consent bool, cfg Config) (*User, error) {
 	if !consent {
-		return nil, errors.New("consent to the processing of personal data is required")
+		return nil, ErrNoConsent
 	}
 
-	if !validation.ValidateEmail(email) {
-		return nil, errors.New("incorrect email")
+	if err := validation.ValidateEmail(email); err != nil {
+		return nil, WrapValidationError("email", err)
 	}
 
-	if !validation.ValidateUsername(username) {
-		return nil, errors.New("username must be alphanumeric and between 3 and 30 characters long")
+	if err := validation.ValidateUsername(username); err != nil {
+		return nil, WrapValidationError("username", err)
 	}
 
 	if password != confirmPassword {
-		return nil, errors.New("passwords do not match")
+		return nil, ErrPasswordsMismatch
 	}
 
-	if !validation.ValidatePassword(password) {
-		return nil, errors.New("password must be at least 6 characters long")
+	if err := validation.ValidatePassword(password); err != nil {
+		return nil, WrapValidationError("password", err)
 	}
 
-	hashedPassword, err := hashPassword(password, bcrypt.DefaultCost)
+	hashedPassword, err := hashPassword(password, cfg.BcryptCost)
 	if err != nil {
-		return nil, err
+		return nil, WrapValidationError("password", ErrHashingPassword)
 	}
 
-	avatar, err := utils.SelectRandomAvatar()
+	avatar, err := cfg.SelectRandomAvatarFn()
 	if err != nil {
-		avatar = "person-1.png"
+		avatar = cfg.DefaultAvatar
 	}
 
 	avatarURL := utils.GetAvatarPath(avatar)
 
-	now := time.Now()
+	id := cfg.IDGenerator()
+	now := cfg.TimeNow()
 
 	return &User{
-		Id:                      uuid.New(),
-		Username:                username,
-		Email:                   email,
-		PasswordHash:            hashedPassword,
-		AvatarURL:               avatarURL,
-		ConsentToDataProcessing: consent,
-		CreatedAt:               now,
-		UpdatedAt:               now,
+		id:                      id,
+		username:                username,
+		email:                   email,
+		passwordHash:            hashedPassword,
+		avatarURL:               avatarURL,
+		consentToDataProcessing: consent,
+		createdAt:               now,
+		updatedAt:               now,
 	}, nil
+}
+
+func (u *User) ID() uuid.UUID                 { return u.id }
+func (u *User) Username() string              { return u.username }
+func (u *User) Email() string                 { return u.email }
+func (u *User) AvatarURL() string             { return u.avatarURL }
+func (u *User) ConsentToDataProcessing() bool { return u.consentToDataProcessing }
+func (u *User) CreatedAt() time.Time          { return u.createdAt }
+func (u *User) UpdatedAt() time.Time          { return u.updatedAt }
+
+func (u *User) CheckPassword(password string) bool {
+	return bcrypt.CompareHashAndPassword([]byte(u.passwordHash), []byte(password)) == nil
 }
 
 func hashPassword(password string, cost int) (string, error) {
@@ -76,5 +102,8 @@ func hashPassword(password string, cost int) (string, error) {
 		cost = bcrypt.DefaultCost
 	}
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), cost)
-	return string(bytes), err
+	if err != nil {
+		return "", ErrHashingPassword
+	}
+	return string(bytes), nil
 }
