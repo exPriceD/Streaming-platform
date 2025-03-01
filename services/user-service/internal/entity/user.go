@@ -52,7 +52,7 @@ func NewUser(username, email, password, confirmPassword string, consent bool) (*
 
 	avatar, err := utils.SelectRandomAvatar()
 	if err != nil {
-		return nil, err
+		avatar = "person-1.png"
 	}
 
 	avatarURL := utils.GetAvatarPath(avatar)
