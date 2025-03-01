@@ -3,9 +3,10 @@ package httpTransport
 import (
 	"context"
 	"errors"
-	"github.com/exPriceD/Streaming-platform/services/user-service/internal/entity"
+	"github.com/exPriceD/Streaming-platform/services/user-service/internal/domain"
 	customErrors "github.com/exPriceD/Streaming-platform/services/user-service/internal/errors"
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/transport/http/middleware"
+	"github.com/exPriceD/Streaming-platform/services/user-service/internal/usecase"
 	"github.com/labstack/echo/v4"
 	"log/slog"
 	"net/http"
@@ -17,26 +18,26 @@ const (
 	cookieMaxAgeDelete     = -1
 )
 
-type UserService interface {
-	RegisterUser(ctx context.Context, username, email, password, confirmPassword string, consent bool) (string, string, string, error)
-	LoginUser(ctx context.Context, loginIdentifier, password string) (string, string, string, error)
+type UserUsecase interface {
+	RegisterUser(ctx context.Context, username, email, password, confirmPassword string, consent bool) (*usecase.RegisterResponse, error)
+	LoginUser(ctx context.Context, loginIdentifier, password string) (*usecase.LoginResponse, error)
 	ValidateToken(ctx context.Context, accessToken string) (bool, string, error)
-	RefreshToken(ctx context.Context, refreshToken string) (string, string, error)
+	RefreshToken(ctx context.Context, refreshToken string) (*usecase.RefreshTokenResponse, error)
 	Logout(ctx context.Context, refreshToken string) (bool, error)
-	GetUserByID(ctx context.Context, userId string) (*entity.User, error)
+	GetUserByID(ctx context.Context, userId string) (domain.User, error)
 }
 
 type Handler struct {
-	userService UserService
+	userUsecase UserUsecase
 	logger      *slog.Logger
 }
 
-func NewHandler(userService UserService, logger *slog.Logger) *Handler {
-	return &Handler{userService: userService, logger: logger}
+func NewHandler(UserUsecase UserUsecase, logger *slog.Logger) *Handler {
+	return &Handler{userUsecase: UserUsecase, logger: logger}
 }
 
 func (h *Handler) GetAuthMiddleware() echo.MiddlewareFunc {
-	return (&middleware.AuthMiddleware{AuthService: h.userService}).UserIdentity
+	return (&middleware.AuthMiddleware{AuthService: h.userUsecase}).UserIdentity
 }
 
 // RegisterUser godoc
@@ -61,7 +62,7 @@ func (h *Handler) RegisterUser(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Invalid request payload"})
 	}
 
-	userId, accessToken, refreshToken, err := h.userService.RegisterUser(ctx, req.Username, req.Email, req.Password, req.ConfirmPassword, req.Consent)
+	registerResponse, err := h.userUsecase.RegisterUser(ctx, req.Username, req.Email, req.Password, req.ConfirmPassword, req.Consent)
 	if err != nil {
 		c.Set("error_message", err.Error())
 		if errors.Is(err, customErrors.ErrInvalidInput) {
@@ -76,14 +77,14 @@ func (h *Handler) RegisterUser(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to register user"})
 	}
 
-	h.setRefreshTokenCookie(c, refreshToken)
+	h.setRefreshTokenCookie(c, registerResponse.RefreshToken)
 
-	h.logger.Info("User registered successfully", slog.String("userId", userId), slog.String("email", req.Email))
+	h.logger.Info("User registered successfully", slog.String("userId", registerResponse.UserId), slog.String("email", req.Email))
 	c.Set("log_message", "User registered successfully")
 	return c.JSON(http.StatusOK, RegisterResponse{
 		Message:     "User registered successfully",
-		UserId:      userId,
-		AccessToken: accessToken,
+		UserId:      registerResponse.UserId,
+		AccessToken: registerResponse.AccessToken,
 	})
 }
 
@@ -109,7 +110,7 @@ func (h *Handler) LoginUser(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Invalid request payload"})
 	}
 
-	userId, accessToken, refreshToken, err := h.userService.LoginUser(ctx, req.LoginIdentifier, req.Password)
+	loginResponse, err := h.userUsecase.LoginUser(ctx, req.LoginIdentifier, req.Password)
 	if err != nil {
 		c.Set("error_message", err.Error())
 		if errors.Is(err, customErrors.ErrInvalidInput) {
@@ -128,14 +129,14 @@ func (h *Handler) LoginUser(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to login"})
 	}
 
-	h.setRefreshTokenCookie(c, refreshToken)
+	h.setRefreshTokenCookie(c, loginResponse.RefreshToken)
 
-	h.logger.Info("User logged in successfully", slog.String("userId", userId), slog.String("login", req.LoginIdentifier))
+	h.logger.Info("User logged in successfully", slog.String("userId", loginResponse.UserId), slog.String("login", req.LoginIdentifier))
 	c.Set("log_message", "User logged in successfully")
 	return c.JSON(http.StatusOK, LoginResponse{
 		Message:     "User logged in successfully",
-		UserId:      userId,
-		AccessToken: accessToken,
+		UserId:      loginResponse.UserId,
+		AccessToken: loginResponse.AccessToken,
 	})
 }
 
@@ -158,7 +159,7 @@ func (h *Handler) LogoutUser(c echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "No refresh token found"})
 	}
 
-	success, err := h.userService.Logout(ctx, refreshToken.Value)
+	success, err := h.userUsecase.Logout(ctx, refreshToken.Value)
 	if err != nil {
 		h.logger.Error("Failed to logout user", slog.String("error", err.Error()))
 		c.Set("error_message", err.Error())
@@ -235,17 +236,17 @@ func (h *Handler) GetUserByID(c echo.Context) error {
 
 // getUserData извлекает данные пользователя по ID
 func (h *Handler) getUserData(ctx context.Context, userId string) (*UserResponse, error) {
-	user, err := h.userService.GetUserByID(ctx, userId)
+	user, err := h.userUsecase.GetUserByID(ctx, userId)
 	if err != nil {
 		h.logger.Error("Failed to get user data", slog.String("userId", userId), slog.String("error", err.Error()))
 		return nil, err
 	}
 	h.logger.Info("User data retrieved successfully", slog.String("userId", userId))
 	return &UserResponse{
-		UserId:    user.Id.String(),
-		Username:  user.Username,
-		Email:     user.Email,
-		AvatarURL: user.AvatarURL,
+		UserId:    user.ID(),
+		Username:  user.Username(),
+		Email:     user.Email(),
+		AvatarURL: user.AvatarURL(),
 	}, nil
 }
 

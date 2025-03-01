@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"github.com/exPriceD/Streaming-platform/services/user-service/internal/usecase"
 	"github.com/labstack/echo/v4"
 	"net/http"
 	"strings"
@@ -9,7 +10,7 @@ import (
 
 type AuthService interface {
 	ValidateToken(ctx context.Context, token string) (bool, string, error)
-	RefreshToken(ctx context.Context, refreshToken string) (string, string, error)
+	RefreshToken(ctx context.Context, refreshToken string) (*usecase.RefreshTokenResponse, error)
 }
 
 type AuthMiddleware struct {
@@ -51,14 +52,14 @@ func (am *AuthMiddleware) UserIdentity(next echo.HandlerFunc) echo.HandlerFunc {
 			return c.JSON(http.StatusUnauthorized, echo.Map{"error": "Refresh token is required"})
 		}
 
-		newAccessToken, newRefreshToken, err := am.AuthService.RefreshToken(ctx, refreshCookie.Value)
+		refreshTokenResponse, err := am.AuthService.RefreshToken(ctx, refreshCookie.Value)
 		if err != nil {
 			return c.JSON(http.StatusUnauthorized, echo.Map{"error": "Failed to refresh token"})
 		}
 
 		c.SetCookie(&http.Cookie{
 			Name:     "refreshToken",
-			Value:    newRefreshToken,
+			Value:    refreshTokenResponse.RefreshToken,
 			HttpOnly: true,
 			// Должно быть включено при использовании HTTPS
 			// Secure:   false,
@@ -67,7 +68,7 @@ func (am *AuthMiddleware) UserIdentity(next echo.HandlerFunc) echo.HandlerFunc {
 
 		return c.JSON(http.StatusUnauthorized, echo.Map{
 			"error":       "Access token expired",
-			"accessToken": newAccessToken,
+			"accessToken": refreshTokenResponse.AccessToken,
 		})
 	}
 }
