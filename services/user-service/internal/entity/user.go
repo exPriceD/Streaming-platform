@@ -45,7 +45,7 @@ func NewUser(username, email, password, confirmPassword string, consent bool) (*
 		return nil, errors.New("password must be at least 6 characters long")
 	}
 
-	hashedPassword, err := hashPassword(password)
+	hashedPassword, err := hashPassword(password, bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +71,10 @@ func NewUser(username, email, password, confirmPassword string, consent bool) (*
 	}, nil
 }
 
-func hashPassword(password string) (string, error) {
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+func hashPassword(password string, cost int) (string, error) {
+	if cost < bcrypt.MinCost || cost > bcrypt.MaxCost {
+		cost = bcrypt.DefaultCost
+	}
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), cost)
 	return string(bytes), err
 }
