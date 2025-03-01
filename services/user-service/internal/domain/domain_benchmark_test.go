@@ -1,7 +1,7 @@
-package entity_test
+package domain_test
 
 import (
-	"github.com/exPriceD/Streaming-platform/services/user-service/internal/entity"
+	"github.com/exPriceD/Streaming-platform/services/user-service/internal/domain"
 	"testing"
 )
 
@@ -11,7 +11,7 @@ func BenchmarkNewUser(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_, err := entity.NewUser("testuser", "test@example.com", "password123", "password123", true, cfg)
+		_, err := domain.NewUser("testuser", "test@example.com", "hash", true, cfg)
 		if err != nil {
 			b.Fatal(err)
 		}
