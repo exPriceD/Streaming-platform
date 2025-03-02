@@ -10,9 +10,9 @@ import (
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/clients"
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/config"
 	"github.com/exPriceD/Streaming-platform/services/user-service/internal/repository"
-	"github.com/exPriceD/Streaming-platform/services/user-service/internal/service"
 	grpcTransport "github.com/exPriceD/Streaming-platform/services/user-service/internal/transport/grpc"
 	httpTransport "github.com/exPriceD/Streaming-platform/services/user-service/internal/transport/http"
+	"github.com/exPriceD/Streaming-platform/services/user-service/internal/usecase"
 	"github.com/joho/godotenv"
 	"log/slog"
 	"net/http"
@@ -82,14 +82,14 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*App, er
 	logger.Info("Database connection established")
 
 	userRepo := repository.NewUserRepository(db)
-	userService := service.NewUserService(cl.Auth, userRepo, logger)
+	userUsecase := usecase.NewUserUsecase(cl.Auth, userRepo, logger)
 	logger.Info("Repositories and services initialized")
 
-	httpHandler := httpTransport.NewHandler(userService, logger)
+	httpHandler := httpTransport.NewHandler(userUsecase, logger)
 	httpRouter := httpTransport.NewRouter(httpHandler, logger, cfg.CORS)
 	logger.Info("HTTP router initialized")
 
-	grpcHandler := grpcTransport.NewHandler(userService, logger)
+	grpcHandler := grpcTransport.NewHandler(userUsecase, logger)
 	grpcServer := grpcTransport.NewGRPCServer(grpcHandler, logger)
 	logger.Info("gRPC server initialized")
 
